@@ -25,7 +25,7 @@ func NewSalModule(svctype int, glue *py.Module) *SalModule {
 	mod.SvcType = int32(svctype)
 	mod.glue = glue
 	mod.init()
-	go mod.runSalClient()
+	mod.runSalClient()
 	go mod.runSalServer()
 	return mod
 }
@@ -126,7 +126,7 @@ func (this *SalModule) Py_SALSubSidBroadcast(args *py.Tuple) (ret *py.Base, err 
 func (this *SalModule) Py_SALMulticast(args *py.Tuple) (ret *py.Base, err error) {
 	var data string
 	var topSid, operatorUid, groupId int
-	var uids []int32
+	var uids []int
 	err = py.ParseV(args, &topSid, &operatorUid, &groupId, &data, &uids)
 	if err != nil {
 		return py.IncNone(), err
@@ -147,7 +147,7 @@ func (this *SalModule) Py_SALMulticast(args *py.Tuple) (ret *py.Base, err error)
 func (this *SalModule) Py_SALMulticast2(args *py.Tuple) (ret *py.Base, err error) {
 	var data string
 	var topSid, multicastGroupId int
-	var uids []int32
+	var uids []int
 	err = py.ParseV(args, &topSid, &multicastGroupId, &data, &uids)
 	if err != nil {
 		return py.IncNone(), err
@@ -194,16 +194,17 @@ func (this *SalModule) Py_SALUnicast(args *py.Tuple) (ret *py.Base, err error) {
 }
 
 func (this *SalModule) Py_SALSSubscribeUserInOutMove(args *py.Tuple) (ret *py.Base, err error) {
-	var tids []int32
+	var tids []int
 	err = py.ParseV(args, &tids)
 	if err != nil {
 		return py.IncNone(), err
 	}
 
 	tidSet := make(map[int32]bool)
-	for uid := range tids {
-		tidSet[int32(uid)] = true
+	for tid := range tids {
+		tidSet[int32(tid)] = true
 	}
+	log.Println("inout tids", tids)
 	r, err := this.SalClient.SALSSubscribeUserInOutMove(this.SvcType, tidSet)
 	if err != nil {
 		return py.IncNone(), err
@@ -212,7 +213,7 @@ func (this *SalModule) Py_SALSSubscribeUserInOutMove(args *py.Tuple) (ret *py.Ba
 }
 
 func (this *SalModule) Py_SALSSubscribeMaixuQueueChange(args *py.Tuple) (ret *py.Base, err error) {
-	var tids []int32
+	var tids []int
 	err = py.ParseV(args, &tids)
 	if err != nil {
 		return py.IncNone(), err
@@ -329,8 +330,9 @@ func (this *SalLocalServerHandler) SALCPing(SvcType int32) (r bool, err error) {
 }
 func (this *SalLocalServerHandler) SALSubscribeUserInOutMove(SvcType int32, return_ []*salService.UserInOut) (r int32, err error) {
 	log.Println("->SALSubscribeUserInOutMove", return_)
-	m := py.NewDict()
-	for _, item := range return_ {
+	tp := py.NewTuple(len(return_))
+	for i, item := range return_ {
+		m := py.NewDict()
 		flag := py.NewInt64(int64(item.Flag))
 		defer flag.Decref()
 		m.SetItemString("Flag", flag.Obj())
@@ -346,8 +348,9 @@ func (this *SalLocalServerHandler) SALSubscribeUserInOutMove(SvcType int32, retu
 		dsid := py.NewInt64(int64(item.Dsid))
 		defer dsid.Decref()
 		m.SetItemString("Dsid", dsid.Obj())
+		tp.SetItem(i, m.Obj())
 	}
-	_, err = this.glue.CallMethodObjArgs("SALSubscribeUserInOutMove", m.Obj())
+	_, err = this.glue.CallMethodObjArgs("SALSubscribeUserInOutMove", tp.Obj())
 	if err != nil {
 		log.Println("py call SALSubscribeUserInOutMove err:", err)
 	}
@@ -367,5 +370,22 @@ func (this *SalLocalServerHandler) SALQueryUserRole(SvcType int32, return_ []*sa
 }
 func (this *SalLocalServerHandler) SALMsgFromClient(SvcType int32, return_ *salService.MsgFromClient) (r int32, err error) {
 	log.Println("->SALMsgFromClient", return_)
+	m := py.NewDict()
+	flag := py.NewInt64(int64(return_.Flag))
+	defer flag.Decref()
+	m.SetItemString("Flag", flag.Obj())
+	topsid := py.NewInt64(int64(return_.TopSid))
+	defer topsid.Decref()
+	m.SetItemString("TopSid", topsid.Obj())
+	uid := py.NewInt64(int64(return_.Uid))
+	defer uid.Decref()
+	m.SetItemString("Uid", uid.Obj())
+	msg := py.NewString(return_.Msg)
+	defer msg.Decref()
+	m.SetItemString("Msg", msg.Obj())
+	_, err = this.glue.CallMethodObjArgs("SALMsgFromClient", m.Obj())
+	if err != nil {
+		log.Println("py call SALMsgFromClient err:", err)
+	}
 	return
 }

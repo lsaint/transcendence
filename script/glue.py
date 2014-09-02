@@ -40,8 +40,11 @@ def OnHttpReq(jn, url):
 
 # sal
 
-def SALSubscribeUserInOutMove(svctype, ):
-    pass
+def SALSubscribeUserInOutMove(tp_inout):
+    print "py SALSubscribeUserInOutMove", tp_inout
+
+def SALMsgFromClient(msg):
+    print "py SALMsgFromClient", msg
 
 # 
 
