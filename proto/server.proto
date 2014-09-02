@@ -1,0 +1,55 @@
+package proto;
+
+// 1
+message FrontendRegister {
+    required uint32 fid = 1;
+}
+
+// 2
+message FrontendPack {
+    required uint32 uri = 1;
+    required uint32 tsid = 2;
+    required uint32 ssid = 3;
+    required bytes bin = 4;
+    optional uint32 fid = 5; 
+    optional uint32 uid = 6;
+}
+
+// 3
+message FrontendUnRegister {
+    required uint32 fid = 1;
+}
+
+
+
+
+// logic only
+enum Action {
+    Broadcast = 1;
+    Randomcast = 2;
+    Unicast = 3;
+}
+
+message GateInPack {
+    required uint32 tsid = 1;
+    required uint32 ssid = 2;
+    required uint32 uri = 3;
+    required bytes bin = 4;
+    required uint32 uid = 5;
+}
+
+message GateOutPack {
+    required uint32 tsid = 1;
+    required uint32 ssid = 2;
+    required uint32 uri = 3;
+    required bytes bin = 4;
+    required Action action = 5;
+    optional uint32 uid = 6;
+    optional uint32 fid = 7;
+}
+
+// 99
+message N2SRegister {
+    required uint32 fid = 1;
+}
+
