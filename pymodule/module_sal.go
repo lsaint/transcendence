@@ -358,14 +358,70 @@ func (this *SalLocalServerHandler) SALSubscribeUserInOutMove(SvcType int32, retu
 }
 func (this *SalLocalServerHandler) SALSubscribeMaixuQueueChange(SvcType int32, return_ *salService.SubscribeMX) (r int32, err error) {
 	log.Println("->SALSubscribeMaixuQueueChange", return_)
+	m := py.NewDict()
+	flag := py.NewInt64(int64(return_.Flag))
+	defer flag.Decref()
+	m.SetItemString("Flag", flag.Obj())
+	topsid := py.NewInt64(int64(return_.TopSid))
+	defer topsid.Decref()
+	m.SetItemString("TopSid", topsid.Obj())
+	subsid := py.NewInt64(int64(return_.SubSid))
+	defer subsid.Decref()
+	m.SetItemString("SubSid", subsid.Obj())
+	msg := py.NewString(return_.Msg)
+	defer msg.Decref()
+	m.SetItemString("Msg", msg.Obj())
+	_, err = this.glue.CallMethodObjArgs("SALSubscribeMaixuQueueChange", m.Obj())
+	if err != nil {
+		log.Println("py call SALSubscribeMaixuQueueChange err:", err)
+	}
 	return
 }
+
 func (this *SalLocalServerHandler) SALQueryMaixuQueue(SvcType int32, return_ map[int32][]int32) (r int32, err error) {
 	log.Println("->SALQueryMaixuQueue", return_)
+	m := py.NewDict()
+	for k, lt := range return_ {
+		tp := py.NewTuple(len(lt))
+		for i, v := range lt {
+			ii := py.NewInt(int(v))
+			defer ii.Decref()
+			tp.SetItem(i, ii.Obj())
+		}
+		kk := py.NewInt(int(k))
+		defer kk.Decref()
+		m.SetItem(kk.Obj(), tp.Obj())
+	}
+	_, err = this.glue.CallMethodObjArgs("SALQueryMaixuQueue", m.Obj())
+	if err != nil {
+		log.Println("py call SALQueryMaixuQueue err:", err)
+	}
 	return
 }
+
 func (this *SalLocalServerHandler) SALQueryUserRole(SvcType int32, return_ []*salService.QueueUserRole) (r int32, err error) {
 	log.Println("->SALQueryUserRole", return_)
+	tp := py.NewTuple(len(return_))
+	for i, item := range return_ {
+		m := py.NewDict()
+		flag := py.NewInt64(int64(item.Flag))
+		defer flag.Decref()
+		m.SetItemString("Flag", flag.Obj())
+		topsid := py.NewInt64(int64(item.TopSid))
+		defer topsid.Decref()
+		m.SetItemString("TopSid", topsid.Obj())
+		uid := py.NewInt64(int64(item.Uid))
+		defer uid.Decref()
+		m.SetItemString("Uid", uid.Obj())
+		smemberjifen := py.NewInt64(int64(item.SmemberJifen))
+		defer smemberjifen.Decref()
+		m.SetItemString("SmemberJifen", smemberjifen.Obj())
+		tp.SetItem(i, m.Obj())
+	}
+	_, err = this.glue.CallMethodObjArgs("SALQueryUserRole", tp.Obj())
+	if err != nil {
+		log.Println("py call SALQueryUserRole err:", err)
+	}
 	return
 }
 func (this *SalLocalServerHandler) SALMsgFromClient(SvcType int32, return_ *salService.MsgFromClient) (r int32, err error) {
