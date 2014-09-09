@@ -17,7 +17,7 @@ const (
 
 // for connect
 type FrontGate struct {
-	cc       *ClientConnection
+	cc       *IConnection
 	fid      uint32
 	buffChan chan *ConnBuff
 
@@ -30,7 +30,7 @@ func NewFrontGate(entry chan *proto.GateInPack, exit chan *proto.GateOutPack) *F
 	if err != nil {
 		log.Fatalln("dial to master err", err)
 	}
-	fe := &FrontGate{fid: uint32(conf.CF.FID), cc: NewClientConnection(conn),
+	fe := &FrontGate{fid: uint32(conf.CF.FID), cc: NewIConnection(conn),
 		buffChan:    make(chan *ConnBuff, conf.CF.BUF_QUEUE),
 		GateInChan:  entry,
 		GateOutChan: exit}

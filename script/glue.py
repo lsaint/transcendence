@@ -56,8 +56,11 @@ def SALQueryUserRole(tp_user_role):
     print  "py SALQueryUserRole", tp_user_role
 
 
-def SALMsgFromClient(msg):
-    print "py SALMsgFromClient", msg
+#def SALMsgFromClient(msg):
+#    print "py SALMsgFromClient", msg
+
+def OnSALClientProto(tsid, uid, uri, data):
+    print "py OnSALClientProto", tsid, uid, uri, data
 
 # 
 

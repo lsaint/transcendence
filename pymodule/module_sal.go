@@ -1,12 +1,16 @@
 package pymodule
 
 import (
+	"bytes"
+	"encoding/binary"
 	"log"
 	"thrift/salService"
-	"transcendence/conf"
 
 	"git.apache.org/thrift.git/lib/go/thrift"
 	"github.com/qiniu/py"
+
+	"transcendence/conf"
+	"transcendence/network"
 )
 
 type SalModule struct {
@@ -201,10 +205,10 @@ func (this *SalModule) Py_SALSSubscribeUserInOutMove(args *py.Tuple) (ret *py.Ba
 	}
 
 	tidSet := make(map[int32]bool)
-	for tid := range tids {
+	for _, tid := range tids {
 		tidSet[int32(tid)] = true
+		log.Println("inout tid", tid)
 	}
-	log.Println("inout tids", tids)
 	r, err := this.SalClient.SALSSubscribeUserInOutMove(this.SvcType, tidSet)
 	if err != nil {
 		return py.IncNone(), err
@@ -273,10 +277,31 @@ func (this *SalModule) Py_SALSocketInfo(args *py.Tuple) (ret *py.Base, err error
 // sal local server handler
 type SalLocalServerHandler struct {
 	glue *py.Module
+	*ClientMsgBroker
 }
 
 func NewSalLocalServerHandler(glue *py.Module) *SalLocalServerHandler {
-	return &SalLocalServerHandler{glue}
+	handler := &SalLocalServerHandler{glue, NewClientMsgBroker()}
+	go handler.proto2py()
+	return handler
+}
+
+func (this *SalLocalServerHandler) proto2py() {
+	for proto := range this.ClientProtoChan {
+		tsid := py.NewInt64(int64(proto.Tsid))
+		defer tsid.Decref()
+		uid := py.NewInt64(int64(proto.Uid))
+		defer uid.Decref()
+		uri := py.NewInt64(int64(proto.Uri))
+		defer uri.Decref()
+		bin := py.NewString(string(proto.Bin))
+		defer bin.Decref()
+		_, err := this.glue.CallMethodObjArgs("OnSALClientProto", tsid.Obj(), uid.Obj(),
+			uri.Obj(), bin.Obj())
+		if err != nil {
+			log.Println("py call OnSALClientProto err:", err)
+		}
+	}
 }
 
 func (this *SalLocalServerHandler) SALPing(SvcType int32) (r bool, err error) {
@@ -426,22 +451,64 @@ func (this *SalLocalServerHandler) SALQueryUserRole(SvcType int32, return_ []*sa
 }
 func (this *SalLocalServerHandler) SALMsgFromClient(SvcType int32, return_ *salService.MsgFromClient) (r int32, err error) {
 	log.Println("->SALMsgFromClient", return_)
-	m := py.NewDict()
-	flag := py.NewInt64(int64(return_.Flag))
-	defer flag.Decref()
-	m.SetItemString("Flag", flag.Obj())
-	topsid := py.NewInt64(int64(return_.TopSid))
-	defer topsid.Decref()
-	m.SetItemString("TopSid", topsid.Obj())
-	uid := py.NewInt64(int64(return_.Uid))
-	defer uid.Decref()
-	m.SetItemString("Uid", uid.Obj())
-	msg := py.NewString(return_.Msg)
-	defer msg.Decref()
-	m.SetItemString("Msg", msg.Obj())
-	_, err = this.glue.CallMethodObjArgs("SALMsgFromClient", m.Obj())
-	if err != nil {
-		log.Println("py call SALMsgFromClient err:", err)
-	}
+
+	this.PassMsg(return_)
 	return
+}
+
+// MsgFromClient ReadWriteCloser
+
+type ClientMsgBroker struct {
+	uid2clientbuff  map[uint32]*ClientBuff
+	ClientProtoChan chan *ClientProto
+}
+
+func NewClientMsgBroker() *ClientMsgBroker {
+	return &ClientMsgBroker{}
+}
+
+func (this *ClientMsgBroker) PassMsg(m *salService.MsgFromClient) {
+	cbuff, exist := this.uid2clientbuff[uint32(m.Uid)]
+	if !exist {
+		cbuff := NewClientBuff(uint32(m.Uid), uint32(m.TopSid))
+		go this.acceptConn(cbuff)
+	} else if cbuff.Tsid != uint32(m.TopSid) {
+		cbuff.Reset()
+	}
+	cbuff.WriteString(m.Msg)
+}
+
+func (this *ClientMsgBroker) acceptConn(cbuff *ClientBuff) {
+	c := network.NewIConnection(cbuff)
+	for {
+		if buff_body, ok := c.ReadBody(); ok {
+			uri := binary.LittleEndian.Uint32(buff_body[:network.LEN_URI])
+			this.ClientProtoChan <- &ClientProto{Tsid: cbuff.Tsid, Uid: cbuff.Uid, Uri: uri,
+				Bin: buff_body[network.LEN_URI:]}
+		}
+	}
+	c.Close()
+}
+
+type ClientProto struct {
+	Tsid uint32
+	Uid  uint32
+	Uri  uint32
+	Bin  []byte
+}
+
+type ClientBuff struct {
+	Tsid uint32
+	Uid  uint32
+	bytes.Buffer
+}
+
+func NewClientBuff(uid, tsid uint32) *ClientBuff {
+	var b bytes.Buffer
+	return &ClientBuff{Uid: uid, Tsid: tsid, Buffer: b}
+}
+
+func (this *ClientBuff) Close() error {
+	this.Reset()
+	return nil
 }

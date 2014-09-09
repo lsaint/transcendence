@@ -22,7 +22,7 @@ const (
 // for accept
 type BackGate struct {
 	buffChan     chan *ConnBuff
-	fid2frontend map[uint32]*ClientConnection
+	fid2frontend map[uint32]*IConnection
 	uid2fid      map[uint32]uint32
 	fids         []uint32
 	GateInChan   chan *proto.GateInPack
@@ -31,7 +31,7 @@ type BackGate struct {
 
 func NewBackGate(entry chan *proto.GateInPack, exit chan *proto.GateOutPack) *BackGate {
 	gs := &BackGate{buffChan: make(chan *ConnBuff, conf.CF.BUF_QUEUE),
-		fid2frontend: make(map[uint32]*ClientConnection),
+		fid2frontend: make(map[uint32]*IConnection),
 		uid2fid:      make(map[uint32]uint32),
 		fids:         make([]uint32, 0),
 		GateInChan:   entry,
@@ -58,7 +58,7 @@ func (this *BackGate) Start() {
 }
 
 func (this *BackGate) acceptConn(conn net.Conn) {
-	cliConn := NewClientConnection(conn)
+	cliConn := NewIConnection(conn)
 	for {
 		if buff_body, ok := cliConn.ReadBody(); ok {
 			this.buffChan <- &ConnBuff{cliConn, buff_body}
@@ -191,7 +191,7 @@ func (this *BackGate) doPack(pack *proto.GateOutPack, fid uint32) (ret []byte) {
 	return
 }
 
-func (this *BackGate) register(b []byte, cc *ClientConnection) {
+func (this *BackGate) register(b []byte, cc *IConnection) {
 	fp := &proto.FrontendRegister{}
 	if err := pb.Unmarshal(b, fp); err == nil {
 		fid := uint32(fp.GetFid())
@@ -212,7 +212,7 @@ func (this *BackGate) register(b []byte, cc *ClientConnection) {
 	}
 }
 
-func (this *BackGate) unregister(cc *ClientConnection) {
+func (this *BackGate) unregister(cc *IConnection) {
 	for fid, c := range this.fid2frontend {
 		if c == cc {
 			//this.fid2frontend[fid] = nil

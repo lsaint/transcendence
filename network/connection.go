@@ -4,7 +4,6 @@ import (
 	"encoding/binary"
 	"io"
 	"log"
-	"net"
 
 	"transcendence/conf"
 )
@@ -15,20 +14,20 @@ const (
 	LEN_EXTRA = LEN_HEAD // 总长度包括包长
 )
 
-type ClientConnection struct {
-	conn     net.Conn
+type IConnection struct {
+	conn     io.ReadWriteCloser
 	sendchan chan []byte
 }
 
-func NewClientConnection(c net.Conn) *ClientConnection {
-	cliConn := new(ClientConnection)
+func NewIConnection(c io.ReadWriteCloser) *IConnection {
+	cliConn := new(IConnection)
 	cliConn.conn = c
 	cliConn.sendchan = make(chan []byte, conf.CF.BUF_QUEUE)
 	go cliConn.sending()
 	return cliConn
 }
 
-func (this *ClientConnection) Send(buf []byte) {
+func (this *IConnection) Send(buf []byte) {
 	head := make([]byte, LEN_HEAD)
 	binary.LittleEndian.PutUint32(head, uint32(len(buf)+LEN_EXTRA))
 	buf = append(head, buf...)
@@ -41,7 +40,7 @@ func (this *ClientConnection) Send(buf []byte) {
 	}
 }
 
-func (this *ClientConnection) sending() {
+func (this *IConnection) sending() {
 	for b := range this.sendchan {
 		if _, err := this.conn.Write(b); err != nil {
 			log.Println("[Error]conn write err:", err)
@@ -50,7 +49,7 @@ func (this *ClientConnection) sending() {
 	}
 }
 
-func (this *ClientConnection) Read(buff []byte) bool {
+func (this *IConnection) Read(buff []byte) bool {
 	if _, err := io.ReadFull(this.conn, buff); err != nil {
 		log.Println("[Error]ReadFull err", err)
 		return false
@@ -58,7 +57,7 @@ func (this *ClientConnection) Read(buff []byte) bool {
 	return true
 }
 
-func (this *ClientConnection) ReadBody() (ret []byte, ok bool) {
+func (this *IConnection) ReadBody() (ret []byte, ok bool) {
 	buff_head := make([]byte, LEN_HEAD)
 	if !this.Read(buff_head) {
 		return
@@ -76,12 +75,12 @@ func (this *ClientConnection) ReadBody() (ret []byte, ok bool) {
 	return
 }
 
-func (this *ClientConnection) Close() {
+func (this *IConnection) Close() {
 	this.conn.Close()
 	//close(this.sendchan)
 }
 
 type ConnBuff struct {
-	conn *ClientConnection
+	conn *IConnection
 	buff []byte
 }
