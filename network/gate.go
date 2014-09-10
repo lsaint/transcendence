@@ -25,11 +25,11 @@ type BackGate struct {
 	fid2frontend map[uint32]*IConnection
 	uid2fid      map[uint32]uint32
 	fids         []uint32
-	GateInChan   chan *proto.GateInPack
-	GateOutChan  chan *proto.GateOutPack
+	GateInChan   chan *proto.Passpack
+	GateOutChan  chan *proto.Passpack
 }
 
-func NewBackGate(entry chan *proto.GateInPack, exit chan *proto.GateOutPack) *BackGate {
+func NewBackGate(entry chan *proto.Passpack, exit chan *proto.Passpack) *BackGate {
 	gs := &BackGate{buffChan: make(chan *ConnBuff, conf.CF.BUF_QUEUE),
 		fid2frontend: make(map[uint32]*IConnection),
 		uid2fid:      make(map[uint32]uint32),
@@ -106,16 +106,15 @@ func (this *BackGate) parse() {
 	}
 }
 
-func (this *BackGate) unpack(b []byte) (msg *proto.GateInPack, err error) {
-	fp := &proto.FrontendPack{}
-	if err = pb.Unmarshal(b, fp); err == nil {
+func (this *BackGate) unpack(b []byte) (msg *proto.Passpack, err error) {
+	msg = &proto.Passpack{}
+	if err = pb.Unmarshal(b, msg); err == nil {
 		// register uid2fid
-		if fp.GetUid() != 0 {
-			this.uid2fid[fp.GetUid()] = fp.GetFid()
+		if msg.GetAction() == proto.Action_Recv {
+			this.uid2fid[msg.GetUids()[0]] = msg.GetFid()
 		}
-		msg = &proto.GateInPack{Tsid: fp.Tsid, Ssid: fp.Ssid, Uri: fp.Uri, Bin: fp.Bin, Uid: fp.Uid}
 	} else {
-		log.Println("[Error]pb Unmarshal FrontendPack", err)
+		log.Println("[Error]pb Unmarshal Passpack", err)
 	}
 	return
 }
@@ -134,7 +133,7 @@ func (this *BackGate) broadcastFid() uint32 {
 	return this.fids[0]
 }
 
-func (this *BackGate) comeout(pack *proto.GateOutPack) {
+func (this *BackGate) comeout(pack *proto.Passpack) {
 	//log.Println("coming out", pack, "fid2frontend", this.fid2frontend)
 	l := len(this.fids)
 	if l == 0 {
@@ -158,7 +157,7 @@ func (this *BackGate) comeout(pack *proto.GateOutPack) {
 	case proto.Action_Unicast:
 		fid := pack.GetFid()
 		if fid == 0 {
-			fid = this.uid2fid[pack.GetUid()]
+			fid = this.uid2fid[pack.GetUids()[0]]
 		}
 		if fid != 0 {
 			if cc := this.fid2frontend[fid]; cc != nil {
@@ -169,24 +168,18 @@ func (this *BackGate) comeout(pack *proto.GateOutPack) {
 				cc.Send(this.doPack(pack, n_fid))
 			}
 		} else {
-			log.Println("[Error]not find uid2fid", pack.GetUid())
+			log.Println("[Error]not find uid2fid", pack.GetUids())
 		}
 	}
 }
 
-func (this *BackGate) doPack(pack *proto.GateOutPack, fid uint32) (ret []byte) {
-	fp := &proto.FrontendPack{Uri: pack.Uri, Tsid: pack.Tsid, Ssid: pack.Ssid,
-		Bin: pack.Bin, Fid: pb.Uint32(fid)}
-	switch pack.GetAction() {
-	case proto.Action_Unicast:
-		fp.Uid = pack.Uid
-	}
-	if data, err := pb.Marshal(fp); err == nil {
+func (this *BackGate) doPack(pack *proto.Passpack, fid uint32) (ret []byte) {
+	if data, err := pb.Marshal(pack); err == nil {
 		uri_field := make([]byte, LEN_URI)
 		binary.LittleEndian.PutUint32(uri_field, uint32(URI_TRANSPORT))
 		ret = append(uri_field, data...)
 	} else {
-		log.Println("[Error]pack FrontendPack", err)
+		log.Println("[Error]pack Passpack", err)
 	}
 	return
 }
@@ -231,7 +224,7 @@ func (this *BackGate) unregister(cc *IConnection) {
 
 func (this *BackGate) notifyRegister(fid uint32) {
 	if data, err := pb.Marshal(&proto.N2SRegister{Fid: pb.Uint32(fid)}); err == nil {
-		this.GateInChan <- &proto.GateInPack{Tsid: pb.Uint32(0), Ssid: pb.Uint32(0),
+		this.GateInChan <- &proto.Passpack{Tsid: pb.Uint32(0), Ssid: pb.Uint32(0),
 			Uri: pb.Uint32(99), Bin: data}
 	}
 }

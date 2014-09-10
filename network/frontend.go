@@ -21,11 +21,11 @@ type FrontGate struct {
 	fid      uint32
 	buffChan chan *ConnBuff
 
-	GateInChan  chan *proto.GateInPack
-	GateOutChan chan *proto.GateOutPack
+	GateInChan  chan *proto.Passpack
+	GateOutChan chan *proto.Passpack
 }
 
-func NewFrontGate(entry chan *proto.GateInPack, exit chan *proto.GateOutPack) *FrontGate {
+func NewFrontGate(entry chan *proto.Passpack, exit chan *proto.Passpack) *FrontGate {
 	conn, err := net.Dial("tcp", conf.CF.DIAL_MASTER_ADDR)
 	if err != nil {
 		log.Fatalln("dial to master err", err)
@@ -68,7 +68,7 @@ func (this *FrontGate) recvFromSock() {
 
 }
 
-// socket buff -> FrontendPack
+// socket buff -> Passpack
 func (this *FrontGate) comein() {
 	for conn_buff := range this.buffChan {
 		msg := conn_buff.buff
@@ -76,23 +76,20 @@ func (this *FrontGate) comein() {
 			log.Println("disconnect")
 			return
 		}
-		fp := &proto.FrontendPack{}
-		if err := pb.Unmarshal(msg[LEN_URI:], fp); err == nil {
-			this.GateInChan <- &proto.GateInPack{Tsid: fp.Tsid,
-				Ssid: fp.Ssid, Uri: fp.Uri, Bin: fp.Bin, Uid: fp.Uid}
+		p := &proto.Passpack{}
+		if err := pb.Unmarshal(msg[LEN_URI:], p); err == nil {
+			this.GateInChan <- p
 		} else {
-			log.Println("Unmarshal FrontGatePack err")
+			log.Println("Unmarshal Passpack err")
 		}
 	}
 }
 
-// GateOutPack -> FrontendPack
+// Passpack -> FrontendPack
 // unicast only
 func (this *FrontGate) comeout() {
 	for pack := range this.GateOutChan {
-		fp := &proto.FrontendPack{Uri: pack.Uri, Tsid: pack.Tsid, Ssid: pack.Ssid,
-			Bin: pack.Bin, Fid: pb.Uint32(this.fid), Uid: pack.Uid}
-		if data, err := pb.Marshal(fp); err == nil {
+		if data, err := pb.Marshal(pack); err == nil {
 			uri_field := make([]byte, LEN_URI)
 			binary.LittleEndian.PutUint32(uri_field, uint32(URI_TRANSPORT))
 			bin := append(uri_field, data...)

@@ -32,8 +32,8 @@ func main() {
 	//    log.Println(http.ListenAndServe("localhost:6061", nil))
 	//}()
 
-	in := make(chan *proto.GateInPack, conf.CF.BUF_QUEUE)
-	out := make(chan *proto.GateOutPack, conf.CF.BUF_QUEUE)
+	in := make(chan *proto.Passpack, conf.CF.BUF_QUEUE)
+	out := make(chan *proto.Passpack, conf.CF.BUF_QUEUE)
 	http_req_chan := make(chan *network.HttpReq, conf.CF.BUF_QUEUE)
 	pymgr := pymodule.NewPyMgr(in, out, http_req_chan)
 	httpsrv := network.NewHttpServer(http_req_chan)

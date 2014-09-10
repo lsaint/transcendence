@@ -59,6 +59,7 @@ def SALQueryUserRole(tp_user_role):
 #def SALMsgFromClient(msg):
 #    print "py SALMsgFromClient", msg
 
+# data是uri所表示的完整协议数据
 def OnSALClientProto(tsid, uid, uri, data):
     print "py OnSALClientProto", tsid, uid, uri, data
 
