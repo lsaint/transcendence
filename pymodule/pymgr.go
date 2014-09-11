@@ -27,7 +27,6 @@ type PyMgr struct {
 	pm       *postman.Postman
 
 	glue *py.Module
-	sal  *py.Module
 
 	gomod    py.GoModule
 	logmod   py.GoModule

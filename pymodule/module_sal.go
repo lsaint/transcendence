@@ -20,10 +20,23 @@ type SalModule struct {
 	SalClient *salService.SalServiceClient
 	SalServer *thrift.TSimpleServer
 	SvcType   int32
+
+	salcb *py.Module
 }
 
 func NewSalModule(svctype int) *SalModule {
-	mod := &SalModule{}
+	code, err := py.CompileFile("./script/salcb.py", py.FileInput)
+	if err != nil {
+		log.Fatalln("Compile sal failed:", err)
+	}
+	defer code.Decref()
+
+	salcb, err := py.ExecCodeModule("salcb", code.Obj())
+	if err != nil {
+		log.Fatalln("ExecCodeModule salcb err:", err)
+	}
+
+	mod := &SalModule{salcb: salcb}
 	mod.SvcType = int32(svctype)
 	mod.init()
 	mod.runSalClient()
@@ -63,7 +76,7 @@ func (this *SalModule) runSalServer() {
 		log.Fatalln("NewTServerSocket err", err)
 	}
 
-	handler := NewSalLocalServerHandler()
+	handler := NewSalLocalServerHandler(this.salcb)
 	processor := salService.NewSalServiceProcessor(handler)
 
 	this.SalServer = thrift.NewTSimpleServer4(processor, transport,
@@ -277,18 +290,7 @@ type SalLocalServerHandler struct {
 	*ClientMsgBroker
 }
 
-func NewSalLocalServerHandler() *SalLocalServerHandler {
-	code, err := py.CompileFile("./script/salcb.py", py.FileInput)
-	if err != nil {
-		log.Fatalln("Compile salcb failed:", err)
-	}
-	defer code.Decref()
-
-	salcb, err := py.ExecCodeModule("salcb", code.Obj())
-	if err != nil {
-		log.Fatalln("ExecCodeModule salcb err:", err)
-	}
-
+func NewSalLocalServerHandler(salcb *py.Module) *SalLocalServerHandler {
 	handler := &SalLocalServerHandler{salcb, NewClientMsgBroker()}
 	go handler.proto2py()
 	return handler
