@@ -41,11 +41,11 @@ func NewBackGate(entry chan *proto.Passpack, exit chan *proto.Passpack) *BackGat
 }
 
 func (this *BackGate) Start() {
-	ln, err := net.Listen("tcp", conf.CF.SRV_ADDR)
+	ln, err := net.Listen("tcp", conf.CF.HIVE_LISTEN_ADDR)
 	if err != nil {
 		log.Fatalln(err)
 	}
-	log.Println("[Info]BackGate running", conf.CF.SRV_ADDR)
+	log.Println("[Info]BackGate running", conf.CF.HIVE_LISTEN_ADDR)
 	for {
 		conn, err := ln.Accept()
 		if err != nil {
@@ -146,7 +146,7 @@ func (this *BackGate) comeout(pack *proto.Passpack) {
 		for _, conn := range this.fid2frontend {
 			conn.Send(p)
 		}
-	case proto.Action_Randomcast:
+	case proto.Action_Randomcast, proto.Action_Multicast:
 		rfid := this.randomFid()
 		p := this.doPack(pack, rfid)
 		if cc := this.fid2frontend[rfid]; cc != nil {
@@ -170,6 +170,24 @@ func (this *BackGate) comeout(pack *proto.Passpack) {
 		} else {
 			log.Println("[Error]not find uid2fid", pack.GetUids())
 		}
+	}
+}
+
+func (this *BackGate) unicast(pack *proto.Passpack) {
+	fid := pack.GetFid()
+	if fid == 0 {
+		fid = this.uid2fid[pack.GetUids()[0]]
+	}
+	if fid != 0 {
+		if cc := this.fid2frontend[fid]; cc != nil {
+			cc.Send(this.doPack(pack, fid))
+		} else {
+			n_fid := this.randomFid()
+			log.Println("[Info]not find fid2frontend", fid, "redirect to", n_fid)
+			cc.Send(this.doPack(pack, n_fid))
+		}
+	} else {
+		log.Println("[Error]not find uid2fid", pack.GetUids())
 	}
 }
 

@@ -25,7 +25,9 @@ type PyMgr struct {
 	sendChan chan *proto.Passpack
 	httpChan chan *network.HttpReq
 	pm       *postman.Postman
-	glue     *py.Module
+
+	glue *py.Module
+	sal  *py.Module
 
 	gomod    py.GoModule
 	logmod   py.GoModule
@@ -56,6 +58,11 @@ func NewPyMgr(in chan *proto.Passpack, out chan *proto.Passpack,
 		log.Fatalln("NewRedisModule failed:", err)
 	}
 
+	mgr.salmod, err = py.NewGoModule("sal", "", NewSalModule(conf.CF.SVCTYPE))
+	if err != nil {
+		log.Fatalln("ExecCodeModule sal err:", err)
+	}
+
 	code, err := py.CompileFile("./script/glue.py", py.FileInput)
 	if err != nil {
 		log.Fatalln("Compile failed:", err)
@@ -63,11 +70,6 @@ func NewPyMgr(in chan *proto.Passpack, out chan *proto.Passpack,
 	defer code.Decref()
 
 	mgr.glue, err = py.ExecCodeModule("glue", code.Obj())
-	if err != nil {
-		log.Fatalln("ExecCodeModule glue err:", err)
-	}
-
-	mgr.salmod, err = py.NewGoModule("sal", "", NewSalModule(conf.CF.SVCTYPE, mgr.glue))
 	if err != nil {
 		log.Fatalln("ExecCodeModule glue err:", err)
 	}
@@ -113,13 +115,16 @@ func (this *PyMgr) onProto(pack *proto.Passpack) {
 		uids.SetItem(i, ii.Obj())
 	}
 
+	action := py.NewInt(int(pack.GetAction()))
+	defer action.Decref()
+
 	b := base64.StdEncoding.EncodeToString(pack.Bin)
 	data := py.NewString(string(b))
 	defer data.Decref()
-	_, err := this.glue.CallMethodObjArgs("OnProto", tsid.Obj(), ssid.Obj(),
-		uri.Obj(), data.Obj(), uids.Obj())
+	_, err := this.glue.CallMethodObjArgs("OnGateProto", tsid.Obj(), ssid.Obj(),
+		uri.Obj(), data.Obj(), action.Obj(), uids.Obj())
 	if err != nil {
-		log.Println("OnProto err:", err)
+		log.Println("OnGateProto err:", err)
 	}
 }
 

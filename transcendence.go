@@ -38,7 +38,7 @@ func main() {
 	pymgr := pymodule.NewPyMgr(in, out, http_req_chan)
 	httpsrv := network.NewHttpServer(http_req_chan)
 
-	if conf.CF.NODE == "master" {
+	if conf.CF.NODE == "hive" {
 		go network.NewBackGate(in, out).Start()
 	} else if conf.CF.NODE == "drone" {
 		go network.NewFrontGate(in, out).Start()

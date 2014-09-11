@@ -26,7 +26,7 @@ type FrontGate struct {
 }
 
 func NewFrontGate(entry chan *proto.Passpack, exit chan *proto.Passpack) *FrontGate {
-	conn, err := net.Dial("tcp", conf.CF.DIAL_MASTER_ADDR)
+	conn, err := net.Dial("tcp", conf.CF.DIAL_HIVE_ADDR)
 	if err != nil {
 		log.Fatalln("dial to master err", err)
 	}
@@ -38,7 +38,7 @@ func NewFrontGate(entry chan *proto.Passpack, exit chan *proto.Passpack) *FrontG
 }
 
 func (this *FrontGate) Start() {
-	log.Println("FrontGate", this.fid, "running, dial to", conf.CF.DIAL_MASTER_ADDR)
+	log.Println("FrontGate", this.fid, "running, dial to", conf.CF.DIAL_HIVE_ADDR)
 	this.register()
 	go this.comein()
 	go this.comeout()

@@ -14,8 +14,6 @@ import (
 )
 
 type SalModule struct {
-	glue *py.Module
-
 	protocolFactory  thrift.TProtocolFactory
 	transportFactory thrift.TTransportFactory
 
@@ -24,10 +22,9 @@ type SalModule struct {
 	SvcType   int32
 }
 
-func NewSalModule(svctype int, glue *py.Module) *SalModule {
+func NewSalModule(svctype int) *SalModule {
 	mod := &SalModule{}
 	mod.SvcType = int32(svctype)
-	mod.glue = glue
 	mod.init()
 	mod.runSalClient()
 	go mod.runSalServer()
@@ -66,7 +63,7 @@ func (this *SalModule) runSalServer() {
 		log.Fatalln("NewTServerSocket err", err)
 	}
 
-	handler := NewSalLocalServerHandler(this.glue)
+	handler := NewSalLocalServerHandler()
 	processor := salService.NewSalServiceProcessor(handler)
 
 	this.SalServer = thrift.NewTSimpleServer4(processor, transport,
@@ -276,12 +273,23 @@ func (this *SalModule) Py_SALSocketInfo(args *py.Tuple) (ret *py.Base, err error
 
 // sal local server handler
 type SalLocalServerHandler struct {
-	glue *py.Module
+	salcb *py.Module
 	*ClientMsgBroker
 }
 
-func NewSalLocalServerHandler(glue *py.Module) *SalLocalServerHandler {
-	handler := &SalLocalServerHandler{glue, NewClientMsgBroker()}
+func NewSalLocalServerHandler() *SalLocalServerHandler {
+	code, err := py.CompileFile("./script/salcb.py", py.FileInput)
+	if err != nil {
+		log.Fatalln("Compile salcb failed:", err)
+	}
+	defer code.Decref()
+
+	salcb, err := py.ExecCodeModule("salcb", code.Obj())
+	if err != nil {
+		log.Fatalln("ExecCodeModule salcb err:", err)
+	}
+
+	handler := &SalLocalServerHandler{salcb, NewClientMsgBroker()}
 	go handler.proto2py()
 	return handler
 }
@@ -296,7 +304,7 @@ func (this *SalLocalServerHandler) proto2py() {
 		defer uri.Decref()
 		bin := py.NewString(string(proto.Bin))
 		defer bin.Decref()
-		_, err := this.glue.CallMethodObjArgs("OnSALClientProto", tsid.Obj(), uid.Obj(),
+		_, err := this.salcb.CallMethodObjArgs("OnSALClientProto", tsid.Obj(), uid.Obj(),
 			uri.Obj(), bin.Obj())
 		if err != nil {
 			log.Println("py call OnSALClientProto err:", err)
@@ -375,7 +383,7 @@ func (this *SalLocalServerHandler) SALSubscribeUserInOutMove(SvcType int32, retu
 		m.SetItemString("Dsid", dsid.Obj())
 		tp.SetItem(i, m.Obj())
 	}
-	_, err = this.glue.CallMethodObjArgs("SALSubscribeUserInOutMove", tp.Obj())
+	_, err = this.salcb.CallMethodObjArgs("SALSubscribeUserInOutMove", tp.Obj())
 	if err != nil {
 		log.Println("py call SALSubscribeUserInOutMove err:", err)
 	}
@@ -396,7 +404,7 @@ func (this *SalLocalServerHandler) SALSubscribeMaixuQueueChange(SvcType int32, r
 	msg := py.NewString(return_.Msg)
 	defer msg.Decref()
 	m.SetItemString("Msg", msg.Obj())
-	_, err = this.glue.CallMethodObjArgs("SALSubscribeMaixuQueueChange", m.Obj())
+	_, err = this.salcb.CallMethodObjArgs("SALSubscribeMaixuQueueChange", m.Obj())
 	if err != nil {
 		log.Println("py call SALSubscribeMaixuQueueChange err:", err)
 	}
@@ -417,7 +425,7 @@ func (this *SalLocalServerHandler) SALQueryMaixuQueue(SvcType int32, return_ map
 		defer kk.Decref()
 		m.SetItem(kk.Obj(), tp.Obj())
 	}
-	_, err = this.glue.CallMethodObjArgs("SALQueryMaixuQueue", m.Obj())
+	_, err = this.salcb.CallMethodObjArgs("SALQueryMaixuQueue", m.Obj())
 	if err != nil {
 		log.Println("py call SALQueryMaixuQueue err:", err)
 	}
@@ -443,7 +451,7 @@ func (this *SalLocalServerHandler) SALQueryUserRole(SvcType int32, return_ []*sa
 		m.SetItemString("SmemberJifen", smemberjifen.Obj())
 		tp.SetItem(i, m.Obj())
 	}
-	_, err = this.glue.CallMethodObjArgs("SALQueryUserRole", tp.Obj())
+	_, err = this.salcb.CallMethodObjArgs("SALQueryUserRole", tp.Obj())
 	if err != nil {
 		log.Println("py call SALQueryUserRole err:", err)
 	}

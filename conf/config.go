@@ -19,8 +19,8 @@ type Config struct {
 	V1               int
 	V2               int
 	FID              int
-	DIAL_MASTER_ADDR string
-	SRV_ADDR         string
+	DIAL_HIVE_ADDR   string
+	HIVE_LISTEN_ADDR string
 	BUF_QUEUE        int
 	MAX_LEN_HEAD     int
 
@@ -63,8 +63,8 @@ func (this *Config) ReadConfig() {
 	this.V1 = this.getInt("V1")
 	this.V2 = this.getInt("V2")
 	this.FID = this.getInt("FID")
-	this.DIAL_MASTER_ADDR = this.getStr("DIAL_MASTER_ADDR")
-	this.SRV_ADDR = this.getStr("SRV_ADDR")
+	this.DIAL_HIVE_ADDR = this.getStr("DIAL_HIVE_ADDR")
+	this.HIVE_LISTEN_ADDR = this.getStr("HIVE_LISTEN_ADDR")
 	this.BUF_QUEUE = this.getInt("BUF_QUEUE")
 	this.MAX_LEN_HEAD = this.getInt("MAX_LEN_HEAD")
 	this.SVCTYPE = this.getInt("SVCTYPE")
