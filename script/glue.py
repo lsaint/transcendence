@@ -1,11 +1,9 @@
 # -*- coding: utf-8 -*-
 
 import sys; sys.path.extend(["./conf/", "./proto/", "./script/"])
-import log
-import traceback
+import traceback, struct
 import server_pb2, logic_pb2
-import go
-import post
+import log, go, post, sal
 
 from timer import Timer
 from config import *
@@ -17,17 +15,19 @@ def OnGateProto(tsid, ssid, uri, data, action, uids):
     try:
         log.debug("OnGateProto--> tsid:%s ssid:%s uri:%d len:%d" % (tsid, ssid, uri, len(data)))
 
-        # hive recv client proto
+        # hive recv client proto 
+        # trigger app logic
+        # then go.SendMsg to client
         if action == server_pb2.Recv:
             return
 
-        # drone do cast
+        # drone cast sal
         if action == server_pb2.Broadcast:
-            return
+            sal.SALSubSidBroadcast(tsid, ssid, 0, packProto(uri, data))
         elif action == server_pb2.Unicast:
-            return
+            sal.SALUnicast(tsid, uids[0], packProto(uri, data))
         elif action == server_pb2.Multicast:
-            return
+            sal.SALMulticast2(tsid, 0, packProto, uids)
 
     except Exception as err:
         log.error("%s-%s" % ("OnGateProto", traceback.format_exc()))
@@ -54,3 +54,7 @@ def OnHttpReq(jn, url):
 
 def test():
     log.debug("testtestbanbang")
+
+
+def packProto(uri, data):
+    return "%s%s" % (struct.pack("II", len(data) + 8, uri), data)

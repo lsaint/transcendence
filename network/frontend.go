@@ -91,7 +91,7 @@ func (this *FrontGate) comeout() {
 	for pack := range this.GateOutChan {
 		if data, err := pb.Marshal(pack); err == nil {
 			uri_field := make([]byte, LEN_URI)
-			binary.LittleEndian.PutUint32(uri_field, uint32(URI_TRANSPORT))
+			binary.LittleEndian.PutUint32(uri_field, pack.GetUri())
 			bin := append(uri_field, data...)
 			this.cc.Send(bin)
 		} else {

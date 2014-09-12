@@ -14,9 +14,10 @@ import (
 
 const (
 	URI_REGISTER   = 1
-	URI_TRANSPORT  = 2
 	URI_UNREGISTER = 3
 	URI_PING       = 4
+
+	URI_DELIMITER = 100
 )
 
 // for accept
@@ -94,14 +95,16 @@ func (this *BackGate) parse() {
 		switch f_uri {
 		case URI_REGISTER:
 			this.register(msg[LEN_URI:], conn)
-		case URI_TRANSPORT:
-			this.comein(msg[LEN_URI:])
 		case URI_UNREGISTER:
 			this.unregister(conn)
 		case URI_PING:
 
 		default:
-			log.Println("[Error]invalid f_uri:", f_uri)
+			if f_uri > URI_DELIMITER {
+				this.comein(msg[LEN_URI:])
+			} else {
+				log.Println("[Error]invalid f_uri:", f_uri)
+			}
 		}
 	}
 }
@@ -194,7 +197,7 @@ func (this *BackGate) unicast(pack *proto.Passpack) {
 func (this *BackGate) doPack(pack *proto.Passpack, fid uint32) (ret []byte) {
 	if data, err := pb.Marshal(pack); err == nil {
 		uri_field := make([]byte, LEN_URI)
-		binary.LittleEndian.PutUint32(uri_field, uint32(URI_TRANSPORT))
+		binary.LittleEndian.PutUint32(uri_field, pack.GetUri())
 		ret = append(uri_field, data...)
 	} else {
 		log.Println("[Error]pack Passpack", err)
