@@ -1,4 +1,6 @@
 # -*- coding: utf-8 -*-
+
+import sys; sys.path.extend(["./conf/", "./proto/", "./script/"])
 import go
 import server_pb2
 

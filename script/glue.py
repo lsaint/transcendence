@@ -18,15 +18,15 @@ def OnGateProto(tsid, ssid, uri, data, action, uids):
         # hive recv client proto 
         # trigger app logic
         # then go.SendMsg to client
-        if action == server_pb2.Recv:
+        if action == server_pb2.D2H_Msg:
             return
 
         # drone cast sal
-        if action == server_pb2.Broadcast:
+        if action == server_pb2.H2D_Broadcast:
             sal.SALSubSidBroadcast(tsid, ssid, 0, packProto(uri, data))
-        elif action == server_pb2.Unicast:
+        elif action == server_pb2.H2D_Unicast:
             sal.SALUnicast(tsid, uids[0], packProto(uri, data))
-        elif action == server_pb2.Multicast:
+        elif action == server_pb2.H2D_Multicast:
             sal.SALMulticast2(tsid, 0, packProto, uids)
 
     except Exception as err:
