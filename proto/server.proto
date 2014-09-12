@@ -3,13 +3,11 @@ package proto;
 
 enum Action {
     // hive -> drone
-    Broadcast = 1;
-    Unicast = 2;
-    Multicast = 3;
-    Randomcast = 4;
+    H2D_Broadcast = 1;
+    H2D_Unicast = 2;
+    H2D_Multicast = 3;
     // drone -> hive
-    Recv = 5;
-    Register = 6;
+    D2H_Msg = 5;
 }
 
 message Passpack {

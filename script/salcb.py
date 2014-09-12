@@ -1,4 +1,6 @@
 # -*- coding: utf-8 -*-
+import go
+import server_pb2
 
 def SALSubscribeUserInOutMove(tp_inout):
     print "py SALSubscribeUserInOutMove", tp_inout
@@ -16,10 +18,8 @@ def SALQueryUserRole(tp_user_role):
     print  "py SALQueryUserRole", tp_user_role
 
 
-#def SALMsgFromClient(msg):
-#    print "py SALMsgFromClient", msg
-
+# drone 
 # data是uri所表示的完整协议数据
 def OnSALClientProto(tsid, uid, uri, data):
-    print "py OnSALClientProto", tsid, uid, uri, data
-
+    print "py OnSALClientProto", tsid, uid, uri, len(data)
+    #go.SendMsg(tsid, ssid, uri, data, server_pb2.D2H_Msg, 0, uid)

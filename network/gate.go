@@ -113,7 +113,7 @@ func (this *BackGate) unpack(b []byte) (msg *proto.Passpack, err error) {
 	msg = &proto.Passpack{}
 	if err = pb.Unmarshal(b, msg); err == nil {
 		// register uid2fid
-		if msg.GetAction() == proto.Action_Recv {
+		if msg.GetAction() == proto.Action_D2H_Msg {
 			this.uid2fid[msg.GetUids()[0]] = msg.GetFid()
 		}
 	} else {
@@ -144,12 +144,12 @@ func (this *BackGate) comeout(pack *proto.Passpack) {
 	}
 
 	switch pack.GetAction() {
-	case proto.Action_Broadcast:
+	case proto.Action_H2D_Broadcast:
 		p := this.doPack(pack, this.broadcastFid())
 		for _, conn := range this.fid2frontend {
 			conn.Send(p)
 		}
-	case proto.Action_Randomcast, proto.Action_Multicast:
+	case proto.Action_H2D_Multicast:
 		rfid := this.randomFid()
 		p := this.doPack(pack, rfid)
 		if cc := this.fid2frontend[rfid]; cc != nil {
@@ -157,7 +157,7 @@ func (this *BackGate) comeout(pack *proto.Passpack) {
 		} else {
 			log.Println("[Error]random not find fid2frontend", rfid)
 		}
-	case proto.Action_Unicast:
+	case proto.Action_H2D_Unicast:
 		fid := pack.GetFid()
 		if fid == 0 {
 			fid = this.uid2fid[pack.GetUids()[0]]

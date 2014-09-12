@@ -89,6 +89,7 @@ func (this *FrontGate) comein() {
 // unicast only
 func (this *FrontGate) comeout() {
 	for pack := range this.GateOutChan {
+		pack.Fid = pb.Uint32(this.fid)
 		if data, err := pb.Marshal(pack); err == nil {
 			uri_field := make([]byte, LEN_URI)
 			binary.LittleEndian.PutUint32(uri_field, pack.GetUri())
