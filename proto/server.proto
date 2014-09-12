@@ -8,6 +8,7 @@ enum Action {
     H2D_Multicast = 3;
     // drone -> hive
     D2H_Msg = 5;
+    D2H_Register = 6;
 }
 
 message Passpack {

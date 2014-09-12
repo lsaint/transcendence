@@ -246,6 +246,6 @@ func (this *BackGate) unregister(cc *IConnection) {
 func (this *BackGate) notifyRegister(fid uint32) {
 	if data, err := pb.Marshal(&proto.N2SRegister{Fid: pb.Uint32(fid)}); err == nil {
 		this.GateInChan <- &proto.Passpack{Tsid: pb.Uint32(0), Ssid: pb.Uint32(0),
-			Uri: pb.Uint32(99), Bin: data}
+			Uri: pb.Uint32(99), Action: proto.Action_D2H_Register.Enum(), Bin: data}
 	}
 }

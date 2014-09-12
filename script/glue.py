@@ -21,6 +21,10 @@ def OnGateProto(tsid, ssid, uri, data, action, uids):
         if action == server_pb2.D2H_Msg:
             return
 
+        # drone connected to hive 
+        if action == server_pb2.D2H_Register:
+            return
+
         # drone cast sal
         if action == server_pb2.H2D_Broadcast:
             sal.SALSubSidBroadcast(tsid, ssid, 0, packProto(uri, data))
