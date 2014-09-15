@@ -206,9 +206,9 @@ func (this *BackGate) doPack(pack *proto.Passpack, fid uint32) (ret []byte) {
 }
 
 func (this *BackGate) register(b []byte, cc *IConnection) {
-	fp := &proto.FrontendRegister{}
-	if err := pb.Unmarshal(b, fp); err == nil {
-		fid := uint32(fp.GetFid())
+	pack := &proto.Passpack{}
+	if err := pb.Unmarshal(b, pack); err == nil {
+		fid := uint32(pack.GetFid())
 		if fid == 0 {
 			log.Println("[Error]fid 0 err")
 			return
@@ -244,8 +244,6 @@ func (this *BackGate) unregister(cc *IConnection) {
 }
 
 func (this *BackGate) notifyRegister(fid uint32) {
-	if data, err := pb.Marshal(&proto.N2SRegister{Fid: pb.Uint32(fid)}); err == nil {
-		this.GateInChan <- &proto.Passpack{Tsid: pb.Uint32(0), Ssid: pb.Uint32(0),
-			Uri: pb.Uint32(URI_REGISTER), Action: proto.Action_D2H_Register.Enum(), Bin: data}
-	}
+	this.GateInChan <- &proto.Passpack{Uri: pb.Uint32(URI_REGISTER),
+		Action: proto.Action_D2H_Register.Enum()}
 }

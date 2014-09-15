@@ -21,21 +21,3 @@ message Passpack {
     optional uint32 fid = 7;
 }
 
-// 1
-message FrontendRegister {
-    required uint32 fid = 1;
-}
-
-// 3
-message FrontendUnRegister {
-    required uint32 fid = 1;
-}
-
-
-
-
-// 99
-message N2SRegister {
-    required uint32 fid = 1;
-}
-

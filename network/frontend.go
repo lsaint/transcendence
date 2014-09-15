@@ -45,7 +45,7 @@ func (this *FrontGate) Start() {
 }
 
 func (this *FrontGate) register() {
-	pack := &proto.FrontendRegister{Fid: pb.Uint32(this.fid)}
+	pack := &proto.Passpack{Fid: pb.Uint32(this.fid), Action: proto.Action_D2H_Register.Enum()}
 	if data, err := pb.Marshal(pack); err == nil {
 		uri_field := make([]byte, LEN_URI)
 		binary.LittleEndian.PutUint32(uri_field, uint32(URI_REGISTER))
@@ -85,7 +85,6 @@ func (this *FrontGate) comein() {
 	}
 }
 
-// Passpack -> FrontendPack
 // unicast only
 func (this *FrontGate) comeout() {
 	for pack := range this.GateOutChan {

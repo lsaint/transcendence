@@ -24,4 +24,7 @@ def SALQueryUserRole(tp_user_role):
 # data是uri所表示的完整协议数据
 def OnSALClientProto(tsid, uid, uri, data):
     print "py OnSALClientProto", tsid, uid, uri, len(data)
-    #go.SendMsg(tsid, ssid, uri, data, server_pb2.D2H_Msg, 0, uid)
+    # test
+    ssid = tsid
+    go.SendMsg(tsid, ssid, uri, data, server_pb2.D2H_Msg, 0, uid)
+
