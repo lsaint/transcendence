@@ -1,5 +1,11 @@
 package proto;
 
-message C2LLogin {
+// 101
+message C2SLogin {
+    required uint32 uid = 1;
 }
 
+// 102
+message S2CLoginRep {
+    required uint32 role = 1;
+}

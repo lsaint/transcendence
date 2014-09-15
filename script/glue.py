@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-import sys; sys.path.extend(["./conf/", "./proto/", "./script/"])
+import sys; sys.path.extend(["./conf/", "./proto/", "./script/", "./tools/"])
 import traceback, struct
 import server_pb2, logic_pb2
 import log, go, post, sal
@@ -53,6 +53,9 @@ def OnPostDone(sn, ret):
 
 def OnHttpReq(jn, url):
     log.debug("OnHttpReq--> json: %s, url: %s" % (jn, url))
+    # test
+    import test
+    test.simulateSalClientProto()
     return "return " + url
 
 
