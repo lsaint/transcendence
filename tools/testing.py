@@ -1,5 +1,6 @@
 # -*- coding: utf8 -*-
 
+import base64
 import salcb
 from logic_pb2 import *
 
@@ -13,7 +14,7 @@ def simulateSalClientProto():
 def simulateRecvClientProto(tsid, ssid, uri, data, action, uids):
     if uri == 101:
         ins = C2SLogin()
-        ins.ParseFromString(data)
-        print "recv proto:", ins
+        ins.ParseFromString(base64.b64decode(data))
+        print "recv proto:", ins.DESCRIPTOR.name, ins
     else:
         print "expect uri101, got:", uri
