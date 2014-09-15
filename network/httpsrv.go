@@ -34,7 +34,7 @@ func (this *HttpServer) Start() {
 
 	log.Println("http server running, listen ",
 		conf.CF.HTTP_LISTEN_PORT, conf.CF.HTTP_LISTEN_URL1, conf.CF.HTTP_LISTEN_URL2)
-	http.ListenAndServe(conf.CF.HTTP_LISTEN_PORT, nil)
+	log.Fatalln(http.ListenAndServe(conf.CF.HTTP_LISTEN_PORT, nil))
 }
 
 func (this *HttpServer) onReq(w http.ResponseWriter, r *http.Request, url string) {
