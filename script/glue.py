@@ -54,8 +54,8 @@ def OnPostDone(sn, ret):
 def OnHttpReq(jn, url):
     log.debug("OnHttpReq--> json: %s, url: %s" % (jn, url))
     # test
-    import test
-    test.simulateSalClientProto()
+    import testing
+    testing.simulateSalClientProto()
     return "return " + url
 
 
