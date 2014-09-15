@@ -46,7 +46,7 @@ func (this *FrontGate) Start() {
 
 func (this *FrontGate) register() {
 	pack := &proto.Passpack{Tsid: pb.Uint32(0), Ssid: pb.Uint32(0), Uri: pb.Uint32(0),
-		Bin: nil, Fid: pb.Uint32(this.fid), Action: proto.Action_D2H_Register.Enum()}
+		Bin: []byte{}, Fid: pb.Uint32(this.fid), Action: proto.Action_D2H_Register.Enum()}
 	if data, err := pb.Marshal(pack); err == nil {
 		uri_field := make([]byte, LEN_URI)
 		binary.LittleEndian.PutUint32(uri_field, uint32(URI_REGISTER))

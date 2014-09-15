@@ -244,6 +244,7 @@ func (this *BackGate) unregister(cc *IConnection) {
 }
 
 func (this *BackGate) notifyRegister(fid uint32) {
-	this.GateInChan <- &proto.Passpack{Uri: pb.Uint32(URI_REGISTER), Tsid: pb.Uint32(0),
-		Ssid: pb.Uint32(0), Fid: pb.Uint32(fid), Bin: nil, Action: proto.Action_D2H_Register.Enum()}
+	this.GateInChan <- &proto.Passpack{Uri: pb.Uint32(URI_REGISTER), Fid: pb.Uint32(fid),
+		Ssid: pb.Uint32(0), Bin: []byte{}, Tsid: pb.Uint32(0),
+		Action: proto.Action_D2H_Register.Enum()}
 }
