@@ -1,7 +1,6 @@
 package pymodule
 
 import (
-	"encoding/base64"
 	"fmt"
 
 	"github.com/qiniu/py"
@@ -37,18 +36,18 @@ func (this *GoModule) Py_SendMsg(args *py.Tuple) (ret *py.Base, err error) {
 		uids32[idx] = uint32(i)
 	}
 
-	b, err := base64.StdEncoding.DecodeString(sbin)
-	if err != nil {
-		fmt.Println("Base64 decode err", err)
-		return
-	}
+	//b, err := base64.StdEncoding.DecodeString(sbin)
+	//if err != nil {
+	//	fmt.Println("Base64 decode err", err)
+	//	return
+	//}
 	this.sendChan <- &proto.Passpack{Tsid: pb.Uint32(uint32(tsid)),
 		Ssid:   pb.Uint32(uint32(ssid)),
 		Uri:    pb.Uint32(uint32(uri)),
 		Action: proto.Action(action).Enum(),
 		Uids:   uids32,
 		Fid:    pb.Uint32(uint32(fid)),
-		Bin:    b}
+		Bin:    []byte(sbin)}
 	return py.IncNone(), nil
 }
 
