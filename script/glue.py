@@ -59,7 +59,7 @@ def OnHttpReq(jn, url):
     return "return " + url
 
 
-def test():
+def test_script():
     log.debug("testtestbanbang")
 
 

@@ -72,7 +72,7 @@ func NewPyMgr(in chan *proto.Passpack, out chan *proto.Passpack,
 		log.Fatalln("ExecCodeModule glue err:", err)
 	}
 
-	_, err = mgr.glue.CallMethodObjArgs("test")
+	_, err = mgr.glue.CallMethodObjArgs("test_script")
 	// defer mgr.pymode.Decref()
 	if err != nil {
 		log.Fatalln("ExecCodeModule failed:", err)
