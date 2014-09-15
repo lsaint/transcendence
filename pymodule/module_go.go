@@ -26,13 +26,13 @@ func (this *GoModule) Py_SendMsg(args *py.Tuple) (ret *py.Base, err error) {
 	var tsid, ssid, uri, action, fid int
 	var sbin string
 	var uids []int
-	var uids32 []uint32
 	err = py.ParseV(args, &tsid, &ssid, &uri, &sbin, &action, &fid, &uids)
 	if err != nil {
 		fmt.Println("SendMsg err", err)
 		return
 	}
 
+	uids32 := make([]uint32, len(uids))
 	for idx, i := range uids {
 		uids32[idx] = uint32(i)
 	}
