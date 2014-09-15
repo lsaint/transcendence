@@ -7,5 +7,5 @@ message C2SLogin {
 
 // 102
 message S2CLoginRep {
-    required uint32 role = 1;
+    required string role = 1;
 }

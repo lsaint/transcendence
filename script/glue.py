@@ -13,8 +13,10 @@ from config import *
 
 def OnGateProto(tsid, ssid, uri, data, action, uids):
     try:
-        log.debug("OnGateProto--> tsid:%s ssid:%s uri:%d len:%d data:" % (
-                tsid, ssid, uri, len(data), data))
+        log.debug("OnGateProto--> tsid:%s ssid:%s uri:%d len:%d" % (tsid, ssid, uri, len(data)))
+
+        import testing
+        testing.simulateRecvClientProto(tsid, ssid, uri, data, action, uids)
 
         # hive recv client proto 
         # trigger app logic
