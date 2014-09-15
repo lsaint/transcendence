@@ -1,8 +1,9 @@
 # -*- coding: utf8 -*-
 
 import base64
-import salcb
+import salcb, go
 from logic_pb2 import *
+from server_pb2 import *
 
 def simulateSalClientProto():
     print "test-simulateSalClientProto"
@@ -18,3 +19,10 @@ def simulateRecvClientProto(tsid, ssid, uri, data, action, uids):
         print "recv proto:", ins.DESCRIPTOR.name, ins
     else:
         print "expect uri101, got:", uri
+
+
+def simulateSendProtoToClient():
+    pb = S2CLoginRep()
+    pb.role = "administer"
+    go.SendMsg(1640285, 1640285, 102, pb.SerializeToString(), H2D_Unicast, 0, 50001906)
+

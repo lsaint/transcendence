@@ -58,7 +58,10 @@ def OnHttpReq(jn, url):
     log.debug("OnHttpReq--> json: %s, url: %s" % (jn, url))
     # test
     import testing
-    testing.simulateSalClientProto()
+    if url == "/transcendence1":
+        testing.simulateSalClientProto()
+    else:
+        testing.simulateSendProtoToClient()
     return "return " + url
 
 
