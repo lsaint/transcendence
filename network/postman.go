@@ -1,4 +1,4 @@
-package postman
+package network
 
 import (
 	"fmt"

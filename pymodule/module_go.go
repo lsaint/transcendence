@@ -6,7 +6,7 @@ import (
 
 	"github.com/qiniu/py"
 
-	"transcendence/postman"
+	"transcendence/network"
 	"transcendence/proto"
 
 	pb "code.google.com/p/goprotobuf/proto"
@@ -14,10 +14,10 @@ import (
 
 type GoModule struct {
 	sendChan chan *proto.Passpack
-	pm       *postman.Postman
+	pm       *network.Postman
 }
 
-func NewGoModule(out chan *proto.Passpack, pm *postman.Postman) *GoModule {
+func NewGoModule(out chan *proto.Passpack, pm *network.Postman) *GoModule {
 	mod := &GoModule{sendChan: out, pm: pm}
 	return mod
 }

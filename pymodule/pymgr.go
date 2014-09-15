@@ -7,7 +7,6 @@ import (
 
 	"transcendence/conf"
 	"transcendence/network"
-	"transcendence/postman"
 	"transcendence/proto"
 
 	"github.com/qiniu/py"
@@ -24,7 +23,7 @@ type PyMgr struct {
 	recvChan chan *proto.Passpack
 	sendChan chan *proto.Passpack
 	httpChan chan *network.HttpReq
-	pm       *postman.Postman
+	pm       *network.Postman
 
 	glue *py.Module
 
@@ -40,7 +39,7 @@ func NewPyMgr(in chan *proto.Passpack, out chan *proto.Passpack,
 	mgr := &PyMgr{recvChan: in,
 		httpChan: http_req_chan,
 		sendChan: out,
-		pm:       postman.NewPostman()}
+		pm:       network.NewPostman()}
 	var err error
 	mgr.gomod, err = py.NewGoModule("go", "", NewGoModule(out, mgr.pm))
 	if err != nil {
