@@ -1,7 +1,7 @@
 # -*- coding: utf8 -*-
 
 import base64
-import salcb, go
+import sal, salcb, go
 from timer import g_timer
 from logic_pb2 import *
 from server_pb2 import *
