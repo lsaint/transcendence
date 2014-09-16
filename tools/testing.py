@@ -2,12 +2,13 @@
 
 import base64
 import salcb, go
+from timer import g_timer
 from logic_pb2 import *
 from server_pb2 import *
 
 
-
 def subscribeSal():
+    g_timer.SetTimer(30, sal.SALPing)
     print "SALSocketInfo", sal.SALSocketInfo("127.0.0.1", 9090)
     print "SALSSubscribeUserInOutMove", sal.SALSSubscribeUserInOutMove(1640285)
 
