@@ -18,7 +18,7 @@ def simulateRecvClientProto(tsid, ssid, uri, data, action, uids):
         ins.ParseFromString(base64.b64decode(data))
         print "recv proto:", ins.DESCRIPTOR.name, ins
     else:
-        print "expect uri101, got:", uri
+        print "got proto uri =", uri
 
 
 def simulateSendProtoToClient():
@@ -26,3 +26,11 @@ def simulateSendProtoToClient():
     pb.role = "administer"
     go.SendMsg(1640285, 1640285, 102, pb.SerializeToString(), H2D_Unicast, 0, 50001906)
 
+
+def simulateDroneRecvUnicast(tsid, ssid, uri, data, action, uids):
+    if uri == 102:
+        pb = S2CLoginRep()
+        pb.ParseFromString(data)
+        print "recv proto:", pb.DESCRIPTOR.name, pb
+    else:
+        print "got proto uri =", uri

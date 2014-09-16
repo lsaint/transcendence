@@ -16,20 +16,20 @@ def OnGateProto(tsid, ssid, uri, data, action, uids):
         log.debug("OnGateProto--> tsid:%s ssid:%s uri:%d len:%d" % (tsid, ssid, uri, len(data)))
 
         import testing
-        testing.simulateRecvClientProto(tsid, ssid, uri, data, action, uids)
 
         # hive recv client proto 
         # trigger app logic
         # then go.SendMsg to client
         if action == server_pb2.D2H_Msg:
-            return
+            testing.simulateRecvClientProto(tsid, ssid, uri, data, action, uids)
 
         # drone connected to hive 
-        if action == server_pb2.D2H_Register:
-            return
+        elif action == server_pb2.D2H_Register:
+            pass
 
         # drone cast sal
-        if action == server_pb2.H2D_Broadcast:
+        elif action == server_pb2.H2D_Broadcast:
+            testing.simulateDroneRecvUnicast(tsid, ssid, uri, data, action, uids):
             sal.SALSubSidBroadcast(tsid, ssid, 0, packProto(uri, data))
         elif action == server_pb2.H2D_Unicast:
             sal.SALUnicast(tsid, uids[0], packProto(uri, data))

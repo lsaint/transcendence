@@ -40,6 +40,7 @@ func NewFrontGate(entry chan *proto.Passpack, exit chan *proto.Passpack) *FrontG
 func (this *FrontGate) Start() {
 	log.Println("FrontGate", this.fid, "running, dial to", conf.CF.DIAL_HIVE_ADDR)
 	this.register()
+	go this.recvFromSock()
 	go this.comein()
 	go this.comeout()
 }
