@@ -30,7 +30,7 @@ def simulateSendProtoToClient():
 def simulateDroneRecvUnicast(tsid, ssid, uri, data, action, uids):
     if uri == 102:
         pb = S2CLoginRep()
-        pb.ParseFromString(data)
+        pb.ParseFromString(base64.b64decode(data))
         print "recv proto:", pb.DESCRIPTOR.name, pb
     else:
         print "got proto uri =", uri
