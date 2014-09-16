@@ -13,7 +13,8 @@ from config import *
 
 def OnGateProto(tsid, ssid, uri, data, action, uids):
     try:
-        log.debug("OnGateProto--> tsid:%s ssid:%s uri:%d len:%d" % (tsid, ssid, uri, len(data)))
+        log.debug("OnGateProto--> tsid:%s ssid:%s uri:%d len:%d action: %s" % (
+                    tsid, ssid, uri, len(data), action))
 
         import testing
 
@@ -29,9 +30,9 @@ def OnGateProto(tsid, ssid, uri, data, action, uids):
 
         # drone cast sal
         elif action == server_pb2.H2D_Broadcast:
-            testing.simulateDroneRecvUnicast(tsid, ssid, uri, data, action, uids):
             sal.SALSubSidBroadcast(tsid, ssid, 0, packProto(uri, data))
         elif action == server_pb2.H2D_Unicast:
+            testing.simulateDroneRecvUnicast(tsid, ssid, uri, data, action, uids)
             sal.SALUnicast(tsid, uids[0], packProto(uri, data))
         elif action == server_pb2.H2D_Multicast:
             sal.SALMulticast2(tsid, 0, packProto, uids)
