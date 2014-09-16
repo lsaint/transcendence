@@ -5,6 +5,7 @@ import (
 	"encoding/binary"
 	"log"
 	"thrift/salService"
+	"time"
 
 	"git.apache.org/thrift.git/lib/go/thrift"
 	"github.com/qiniu/py"
@@ -68,6 +69,7 @@ func (this *SalModule) runSalClient() {
 		log.Fatalln("SALLogin FAIL", err)
 	}
 	log.Println("SALLogin sucess", r)
+	this.loopPing()
 }
 
 func (this *SalModule) runSalServer() {
@@ -83,6 +85,15 @@ func (this *SalModule) runSalServer() {
 		this.transportFactory, this.protocolFactory)
 	log.Println("local server running")
 	this.SalServer.Serve()
+}
+
+// sal timeout setting: 60s
+func (this *SalModule) loopPing() {
+	log.Println("looping ping")
+	ticker := time.Tick(30 * time.Second)
+	for _ = range ticker {
+		this.SalClient.SALPing(this.SvcType)
+	}
 }
 
 //

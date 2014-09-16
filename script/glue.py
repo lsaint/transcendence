@@ -25,8 +25,9 @@ def OnGateProto(tsid, ssid, uri, data, action, uids):
             testing.simulateRecvClientProto(tsid, ssid, uri, data, action, uids)
 
         # drone connected to hive 
+        # hive init
         elif action == server_pb2.D2H_Register:
-            pass
+            testing.subscribeSal()
 
         # drone cast sal
         elif action == server_pb2.H2D_Broadcast:

@@ -5,6 +5,13 @@ import salcb, go
 from logic_pb2 import *
 from server_pb2 import *
 
+
+
+def subscribeSal():
+    print "SALSocketInfo", sal.SALSocketInfo("127.0.0.1", 9090)
+    print "SALSSubscribeUserInOutMove", sal.SALSSubscribeUserInOutMove(1640285)
+
+
 def simulateSalClientProto():
     print "test-simulateSalClientProto"
     pb = C2SLogin()
@@ -34,3 +41,5 @@ def simulateDroneRecvUnicast(tsid, ssid, uri, data, action, uids):
         print "recv proto:", pb.DESCRIPTOR.name, pb
     else:
         print "got proto uri =", uri
+
+
