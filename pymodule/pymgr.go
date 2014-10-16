@@ -9,6 +9,7 @@ import (
 	"transcendence/network"
 	"transcendence/proto"
 
+	"github.com/hashicorp/memberlist"
 	"github.com/qiniu/py"
 )
 
@@ -20,10 +21,11 @@ const (
 )
 
 type PyMgr struct {
-	recvChan chan *proto.Passpack
-	sendChan chan *proto.Passpack
-	httpChan chan *network.HttpReq
-	pm       *network.Postman
+	recvChan      chan *proto.Passpack
+	sendChan      chan *proto.Passpack
+	httpChan      chan *network.HttpReq
+	nodeEventChan chan memberlist.NodeEvent
+	pm            *network.Postman
 
 	glue *py.Module
 
@@ -33,13 +35,16 @@ type PyMgr struct {
 	salmod   py.GoModule
 }
 
-func NewPyMgr(in chan *proto.Passpack, out chan *proto.Passpack,
-	http_req_chan chan *network.HttpReq) *PyMgr {
+func NewPyMgr(in chan *proto.Passpack,
+	out chan *proto.Passpack,
+	http_req_chan chan *network.HttpReq,
+	node_event_chan chan memberlist.NodeEvent) *PyMgr {
 
 	mgr := &PyMgr{recvChan: in,
-		httpChan: http_req_chan,
-		sendChan: out,
-		pm:       network.NewPostman()}
+		httpChan:      http_req_chan,
+		nodeEventChan: node_event_chan,
+		sendChan:      out,
+		pm:            network.NewPostman()}
 	var err error
 	mgr.gomod, err = py.NewGoModule("go", "", NewGoModule(out, mgr.pm))
 	if err != nil {
@@ -92,6 +97,8 @@ func (this *PyMgr) Start() {
 			this.onPostDone(post_ret.Sn, <-post_ret.Ret)
 		case req := <-this.httpChan:
 			req.Ret <- this.onHttpReq(req.Req, req.Url)
+		case ev := <-this.nodeEventChan:
+			this.onClusterNodeEvent(ev)
 		}
 	}
 }
@@ -157,4 +164,16 @@ func (this *PyMgr) onHttpReq(jn, url string) string {
 		return ret.String()
 	}
 	return ""
+}
+
+func (this *PyMgr) onClusterNodeEvent(ev memberlist.NodeEvent) {
+	py_ev_type := py.NewInt64(int64(ev.Event))
+	defer py_ev_type.Decref()
+	py_node_name := py.NewString(ev.Node.Name)
+	defer py_node_name.Decref()
+
+	_, err := this.glue.CallMethodObjArgs("OnClusterNodeEvent", py_ev_type.Obj(), py_node_name.Obj())
+	if err != nil {
+		log.Println("OnClusterNodeEvent err:", err)
+	}
 }

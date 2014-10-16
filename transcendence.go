@@ -32,10 +32,11 @@ func main() {
 	//    log.Println(http.ListenAndServe("localhost:6061", nil))
 	//}()
 
+	cluster_node := network.NewClusterNode()
 	in := make(chan *proto.Passpack, conf.CF.BUF_QUEUE)
 	out := make(chan *proto.Passpack, conf.CF.BUF_QUEUE)
 	http_req_chan := make(chan *network.HttpReq, conf.CF.BUF_QUEUE)
-	pymgr := pymodule.NewPyMgr(in, out, http_req_chan)
+	pymgr := pymodule.NewPyMgr(in, out, http_req_chan, cluster_node.NodeEventChan)
 	httpsrv := network.NewHttpServer(http_req_chan)
 
 	if conf.CF.NODE == "hive" {

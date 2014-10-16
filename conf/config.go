@@ -34,6 +34,10 @@ type Config struct {
 	HTTP_TIME_OUT    int
 
 	POST_TIME_OUT int
+
+	CLUSTER_NODE_NAME     string
+	CLUSTER_NODE_PORT     int
+	CLUSTER_NODE_CONNECT2 string
 }
 
 func NewConfig() *Config {
@@ -75,6 +79,9 @@ func (this *Config) ReadConfig() {
 	this.HTTP_LISTEN_URL2 = this.getStr("HTTP_LISTEN_URL2")
 	this.HTTP_TIME_OUT = this.getInt("HTTP_TIME_OUT")
 	this.POST_TIME_OUT = this.getInt("POST_TIME_OUT")
+	this.CLUSTER_NODE_NAME = this.getStr("CLUSTER_NODE_NAME")
+	this.CLUSTER_NODE_PORT = this.getInt("CLUSTER_NODE_PORT")
+	this.CLUSTER_NODE_CONNECT2 = this.getStr("CLUSTER_NODE_CONNECT2")
 }
 
 func (this *Config) getStr(attr string) string {
