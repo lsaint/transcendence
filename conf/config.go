@@ -63,11 +63,8 @@ func NewConfig() *Config {
 }
 
 func (this *Config) ReadConfig() {
-	this.NODE = this.getStr("NODE")
 	this.V1 = this.getInt("V1")
 	this.V2 = this.getInt("V2")
-	this.FID = this.getInt("FID")
-	this.DIAL_HIVE_ADDR = this.getStr("DIAL_HIVE_ADDR")
 	this.HIVE_LISTEN_ADDR = this.getStr("HIVE_LISTEN_ADDR")
 	this.BUF_QUEUE = this.getInt("BUF_QUEUE")
 	this.MAX_LEN_HEAD = this.getInt("MAX_LEN_HEAD")

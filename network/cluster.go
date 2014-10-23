@@ -23,6 +23,7 @@ func NewClusterNode() *ClusterNode {
 	if err != nil {
 		log.Fatalln("Failed to create memberlist: " + err.Error())
 	}
+	log.Println("memberlist port:", config.BindPort)
 
 	if conf.CF.CLUSTER_NODE_CONNECT2 != "" {
 		_, err = l.Join([]string{conf.CF.CLUSTER_NODE_CONNECT2})
