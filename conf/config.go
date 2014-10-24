@@ -1,7 +1,9 @@
 package conf
 
 import (
+	"flag"
 	"fmt"
+	"log"
 
 	"github.com/qiniu/py"
 )
@@ -38,22 +40,27 @@ type Config struct {
 	CLUSTER_NODE_NAME     string
 	CLUSTER_NODE_PORT     int
 	CLUSTER_NODE_CONNECT2 string
+
+	RAFT_ADDR string
+	RAFT_DIR  string
 }
 
 func NewConfig() *Config {
-	cf := new(Config)
+	conf_path := flag.String("c", "./conf/config.py", "config file path")
+	flag.Parse()
 
-	code, err := py.CompileFile("./conf/config.py", py.FileInput)
+	cf := new(Config)
+	code, err := py.CompileFile(*conf_path, py.FileInput)
 	if err != nil {
 		fmt.Println(err)
-		panic("Compile config failed")
+		log.Fatalln("Compile config failed")
 	}
 	defer code.Decref()
 
 	cf.mod, err = py.ExecCodeModule("conf", code.Obj())
 	if err != nil {
 		fmt.Println(err)
-		panic("ExecCodeModule failed")
+		log.Fatalln("ExecCodeModule failed")
 	}
 	defer cf.mod.Decref()
 
@@ -61,7 +68,6 @@ func NewConfig() *Config {
 
 	return cf
 }
-
 func (this *Config) ReadConfig() {
 	this.V1 = this.getInt("V1")
 	this.V2 = this.getInt("V2")
@@ -79,6 +85,8 @@ func (this *Config) ReadConfig() {
 	this.CLUSTER_NODE_NAME = this.getStr("CLUSTER_NODE_NAME")
 	this.CLUSTER_NODE_PORT = this.getInt("CLUSTER_NODE_PORT")
 	this.CLUSTER_NODE_CONNECT2 = this.getStr("CLUSTER_NODE_CONNECT2")
+	this.RAFT_ADDR = this.getStr("RAFT_ADDR")
+	this.RAFT_DIR = this.getStr("RAFT_DIR")
 }
 
 func (this *Config) getStr(attr string) string {
@@ -86,11 +94,11 @@ func (this *Config) getStr(attr string) string {
 	defer s.Decref()
 	if err != nil {
 		fmt.Println(err)
-		panic("Config getStr err")
+		log.Fatalln("Config getStr err")
 	}
 	ss, ok := py.ToString(s)
 	if !ok {
-		panic("Config ToString err")
+		log.Fatalln("Config ToString err")
 	}
 	return ss
 }
@@ -100,11 +108,11 @@ func (this *Config) getInt(attr string) int {
 	defer s.Decref()
 	if err != nil {
 		fmt.Println(err)
-		panic("Config getInt err")
+		log.Fatalln("Config getInt err")
 	}
 	i, ok := py.ToInt(s)
 	if !ok {
-		panic("Config ToInt err")
+		log.Fatalln("Config ToInt err")
 	}
 	return i
 }

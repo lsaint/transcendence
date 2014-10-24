@@ -9,7 +9,6 @@ import (
 	"transcendence/network"
 	"transcendence/proto"
 
-	"github.com/hashicorp/memberlist"
 	"github.com/qiniu/py"
 )
 
@@ -24,7 +23,7 @@ type PyMgr struct {
 	recvChan      chan *proto.Passpack
 	sendChan      chan *proto.Passpack
 	httpChan      chan *network.HttpReq
-	nodeEventChan chan memberlist.NodeEvent
+	nodeEventChan chan network.NodeEvent
 	pm            *network.Postman
 
 	glue *py.Module
@@ -38,7 +37,7 @@ type PyMgr struct {
 func NewPyMgr(in chan *proto.Passpack,
 	out chan *proto.Passpack,
 	http_req_chan chan *network.HttpReq,
-	node_event_chan chan memberlist.NodeEvent) *PyMgr {
+	node_event_chan chan network.NodeEvent) *PyMgr {
 
 	mgr := &PyMgr{recvChan: in,
 		httpChan:      http_req_chan,
@@ -166,10 +165,14 @@ func (this *PyMgr) onHttpReq(jn, url string) string {
 	return ""
 }
 
-func (this *PyMgr) onClusterNodeEvent(ev memberlist.NodeEvent) {
+func (this *PyMgr) onClusterNodeEvent(ev network.NodeEvent) {
 	py_ev_type := py.NewInt64(int64(ev.Event))
 	defer py_ev_type.Decref()
-	py_node_name := py.NewString(ev.Node.Name)
+	name := ""
+	if ev.Node != nil {
+		name = ev.Node.Name
+	}
+	py_node_name := py.NewString(name)
 	defer py_node_name.Decref()
 
 	_, err := this.glue.CallMethodObjArgs("OnClusterNodeEvent", py_ev_type.Obj(), py_node_name.Obj())

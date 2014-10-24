@@ -68,7 +68,7 @@ def OnHttpReq(jn, url):
 
 
 def OnClusterNodeEvent(ev_type, node_name):
-    print "OnClusterNodeEvent", ev_type, node_name
+    print "------------------>OnClusterNodeEvent", ev_type, node_name
 
 
 def test_script():
