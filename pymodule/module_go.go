@@ -14,10 +14,11 @@ import (
 type GoModule struct {
 	sendChan chan *proto.Passpack
 	pm       *network.Postman
+	isLeader bool
 }
 
 func NewGoModule(out chan *proto.Passpack, pm *network.Postman) *GoModule {
-	mod := &GoModule{sendChan: out, pm: pm}
+	mod := &GoModule{sendChan: out, pm: pm, isLeader: false}
 	return mod
 }
 
@@ -57,4 +58,12 @@ func (this *GoModule) Py_PostAsync(args *py.Tuple) (ret *py.Base, err error) {
 	err = py.Parse(args, &url, &content, &sn)
 	this.pm.PostAsync(url, content, int64(sn))
 	return py.IncNone(), nil
+}
+
+func (this *GoModule) Py_IsLeader(args *py.Tuple) (ret *py.Base, err error) {
+	if this.isLeader {
+		return py.NewInt(1).Obj(), nil
+	} else {
+		return py.NewInt(0).Obj(), nil
+	}
 }

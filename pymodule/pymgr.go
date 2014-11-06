@@ -28,6 +28,7 @@ type PyMgr struct {
 
 	glue *py.Module
 
+	gomo     *GoModule
 	gomod    py.GoModule
 	logmod   py.GoModule
 	redismod py.GoModule
@@ -45,7 +46,8 @@ func NewPyMgr(in chan *proto.Passpack,
 		sendChan:      out,
 		pm:            network.NewPostman()}
 	var err error
-	mgr.gomod, err = py.NewGoModule("go", "", NewGoModule(out, mgr.pm))
+	mgr.gomo = NewGoModule(out, mgr.pm)
+	mgr.gomod, err = py.NewGoModule("go", "", mgr.gomo)
 	if err != nil {
 		log.Fatalln("NewGoModule failed:", err)
 	}
@@ -166,6 +168,12 @@ func (this *PyMgr) onHttpReq(jn, url string) string {
 }
 
 func (this *PyMgr) onClusterNodeEvent(ev network.NodeEvent) {
+	if ev.Event == network.NodeBecomeLeader {
+		this.gomo.isLeader = true
+	} else if ev.Event == network.NodeHandoffLeader {
+		this.gomo.isLeader = false
+	}
+
 	py_ev_type := py.NewInt64(int64(ev.Event))
 	defer py_ev_type.Decref()
 	name := ""

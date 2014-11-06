@@ -1,9 +1,11 @@
 package network
 
 import (
+	"fmt"
 	"io"
 	"log"
 	"net"
+	"os"
 	"sync"
 	"time"
 	"transcendence/conf"
@@ -41,7 +43,7 @@ func NewClusterNode() *ClusterNode {
 
 	// raft
 	node.raftNode = NewRaftNode()
-	go node.waitLeader(node.raftNode.LeaderCh)
+	go node.notifyLeader(node.raftNode.LeaderCh)
 
 	// memberlist
 	config := memberlist.DefaultLocalConfig()
@@ -49,6 +51,11 @@ func NewClusterNode() *ClusterNode {
 	config.BindAddr = "127.0.0.1"
 	config.BindPort = conf.CF.CLUSTER_NODE_PORT
 	config.Events = node
+	file, err := os.Create(fmt.Sprintf("%v/memlog", conf.CF.RAFT_DIR))
+	if err != nil {
+		log.Fatalln("Create memlog err:", err)
+	}
+	config.LogOutput = file
 	l, err := memberlist.Create(config) // memberlist.Create
 	if err != nil {
 		log.Fatalln("Failed to create memberlist: " + err.Error())
@@ -66,8 +73,8 @@ func NewClusterNode() *ClusterNode {
 }
 
 func (c *ClusterNode) NotifyJoin(n *memberlist.Node) {
+	log.Println("NotifyJoin")
 	addr := &net.TCPAddr{IP: n.Addr, Port: int(n.Port) + 100}
-	log.Println("[CLUSTER]raft adding addr", addr)
 	c.NodeEventChan <- NodeEvent{NodeJoin, n}
 	if c.raftNode.IsLeader() {
 		future := c.raftNode.Raft.AddPeer(addr)
@@ -78,10 +85,9 @@ func (c *ClusterNode) NotifyJoin(n *memberlist.Node) {
 }
 
 func (c *ClusterNode) NotifyLeave(n *memberlist.Node) {
-	addr := &net.TCPAddr{IP: n.Addr, Port: int(n.Port) + 100}
-	log.Println("[CLUSTER]raft removing addr", addr)
 	c.NodeEventChan <- NodeEvent{NodeLeave, n}
 	//if c.raftNode.IsLeader() {
+	// 	addr := &net.TCPAddr{IP: n.Addr, Port: int(n.Port) + 100}
 	//	future := c.raftNode.Raft.RemovePeer(addr)
 	//	if err := future.Error(); err != nil {
 	//		log.Println("[CLUSTER] remove peer fail", addr, err)
@@ -101,7 +107,7 @@ func (c *ClusterNode) NotifyHandoffLeader() {
 	c.NodeEventChan <- NodeEvent{NodeHandoffLeader, nil}
 }
 
-func (c *ClusterNode) waitLeader(ch <-chan bool) {
+func (c *ClusterNode) notifyLeader(ch <-chan bool) {
 	for {
 		select {
 		case b := <-ch:
@@ -127,9 +133,21 @@ type RaftNode struct {
 func NewRaftNode() *RaftNode {
 	var err error
 	node := &RaftNode{}
+	path := conf.CF.RAFT_DIR
+
+	dbSize := uint64(8 * 1024 * 1024)
+	store, err := raftmdb.NewMDBStoreWithSize(path, dbSize)
+	if err != nil {
+		log.Fatalln("store err", err)
+	}
 
 	config := raft.DefaultConfig()
 	config.EnableSingleNode = true
+	file, err := os.Create(fmt.Sprintf("%vlogoutput", path))
+	if err != nil {
+		log.Fatalln("create logoutput err:", err)
+	}
+	config.LogOutput = file
 
 	node.trans, err = raft.NewTCPTransport(conf.CF.RAFT_ADDR,
 		nil, 2, time.Second, config.LogOutput)
@@ -137,14 +155,7 @@ func NewRaftNode() *RaftNode {
 		log.Fatalln("trans err", err)
 	}
 
-	path := conf.CF.RAFT_DIR
-	dbSize := uint64(8 * 1024 * 1024)
-	store, err := raftmdb.NewMDBStoreWithSize(path, dbSize)
-	if err != nil {
-		log.Fatalln("store err", err)
-	}
-
-	snapshotsRetained := 2
+	snapshotsRetained := 20
 	snapshots, err := raft.NewFileSnapshotStore(path, snapshotsRetained, config.LogOutput)
 	if err != nil {
 		log.Fatalln("snapshots err", err)

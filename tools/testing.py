@@ -44,3 +44,9 @@ def simulateDroneRecvUnicast(tsid, ssid, uri, data, action, uids):
         print "got proto uri =", uri
 
 
+def testIsLeader():
+    def lam():
+        print(go.IsLeader())
+    g_timer.SetTimer(5, lam)
+
+
