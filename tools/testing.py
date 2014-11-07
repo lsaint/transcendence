@@ -2,7 +2,7 @@
 
 import base64
 import sal, salcb, go
-from timer import g_timer
+from timer import g_timer, g_leadertimer
 from logic_pb2 import *
 from server_pb2 import *
 
@@ -49,4 +49,10 @@ def testIsLeader():
         print(go.IsLeader())
     g_timer.SetTimer(5, lam)
 
+
+
+def func():
+    print("leader timer tick tack. tick tack..")
+def testLeaderTimer():
+    g_leadertimer.SetLeaderTimer(5, func)
 

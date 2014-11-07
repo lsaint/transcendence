@@ -5,7 +5,7 @@ import traceback, struct
 import server_pb2, logic_pb2
 import log, go, post, sal
 
-from timer import Timer
+from timer import Timer, LeaderTimer
 from config import *
 
 
@@ -45,6 +45,7 @@ def OnGateProto(tsid, ssid, uri, data, action, uids):
 def OnTicker():
     try:
         Timer.Update()
+        LeaderTimer.Update()
     except Exception as err:
         log.error("%s-%s" % ("OnTicker", traceback.format_exc()))
 
@@ -69,10 +70,22 @@ def OnHttpReq(jn, url):
 
 def OnClusterNodeEvent(ev_type, node_name):
     print "------------------>OnClusterNodeEvent", ev_type, node_name
+    try:
+        # become leader
+        if ev_type == 3:
+            LeaderTimer.OnBecomeLeader()
+            import testing
+            testing.testLeaderTimer()
+        elif ev_type == 4:
+            LeaderTimer.OnHandoffLeader()
+    except Exception as err:
+        log.error("%s-%s" % ("OnClusterNodeEvent", traceback.format_exc()))
 
 
 def test_script():
     log.debug("testtestbanbang")
+    import testing
+    testing.testLeaderTimer()
 
 
 def packProto(uri, data):
