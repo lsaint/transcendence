@@ -34,7 +34,7 @@ type NodeEvent struct {
 type ClusterNode struct {
 	NodeEventChan chan NodeEvent
 
-	raftNode *RaftNode
+	RaftAgent *ClusterRaftAgent
 }
 
 func NewClusterNode() *ClusterNode {
@@ -42,8 +42,8 @@ func NewClusterNode() *ClusterNode {
 	node := &ClusterNode{NodeEventChan: ch}
 
 	// raft
-	node.raftNode = NewRaftNode()
-	go node.notifyLeader(node.raftNode.LeaderCh)
+	node.RaftAgent = NewClusterRaftAgent()
+	go node.notifyLeader(node.RaftAgent.LeaderCh)
 
 	// memberlist
 	config := memberlist.DefaultLocalConfig()
@@ -76,8 +76,8 @@ func (c *ClusterNode) NotifyJoin(n *memberlist.Node) {
 	log.Println("NotifyJoin")
 	addr := &net.TCPAddr{IP: n.Addr, Port: int(n.Port) + 100}
 	c.NodeEventChan <- NodeEvent{NodeJoin, n}
-	if c.raftNode.IsLeader() {
-		future := c.raftNode.Raft.AddPeer(addr)
+	if c.RaftAgent.IsLeader() {
+		future := c.RaftAgent.Raft.AddPeer(addr)
 		if err := future.Error(); err != nil {
 			log.Println("[CLUSTER] addpeer fail", addr, err)
 		}
@@ -86,9 +86,9 @@ func (c *ClusterNode) NotifyJoin(n *memberlist.Node) {
 
 func (c *ClusterNode) NotifyLeave(n *memberlist.Node) {
 	c.NodeEventChan <- NodeEvent{NodeLeave, n}
-	//if c.raftNode.IsLeader() {
+	//if c.RaftAgent.IsLeader() {
 	// 	addr := &net.TCPAddr{IP: n.Addr, Port: int(n.Port) + 100}
-	//	future := c.raftNode.Raft.RemovePeer(addr)
+	//	future := c.RaftAgent.Raft.RemovePeer(addr)
 	//	if err := future.Error(); err != nil {
 	//		log.Println("[CLUSTER] remove peer fail", addr, err)
 	//	}
@@ -122,7 +122,7 @@ func (c *ClusterNode) notifyLeader(ch <-chan bool) {
 
 //
 
-type RaftNode struct {
+type ClusterRaftAgent struct {
 	trans *raft.NetworkTransport
 	peers *raft.JSONPeers
 
@@ -130,9 +130,9 @@ type RaftNode struct {
 	LeaderCh <-chan bool
 }
 
-func NewRaftNode() *RaftNode {
+func NewClusterRaftAgent() *ClusterRaftAgent {
 	var err error
-	node := &RaftNode{}
+	node := &ClusterRaftAgent{}
 	path := conf.CF.RAFT_DIR
 
 	dbSize := uint64(8 * 1024 * 1024)
@@ -143,6 +143,8 @@ func NewRaftNode() *RaftNode {
 
 	config := raft.DefaultConfig()
 	config.EnableSingleNode = true
+	config.SnapshotInterval = 20 * time.Second
+	config.SnapshotThreshold = 1
 	file, err := os.Create(fmt.Sprintf("%vlogoutput", path))
 	if err != nil {
 		log.Fatalln("create logoutput err:", err)
@@ -174,11 +176,11 @@ func NewRaftNode() *RaftNode {
 	return node
 }
 
-func (this *RaftNode) IsLeader() bool {
+func (this *ClusterRaftAgent) IsLeader() bool {
 	return this.Raft.Leader() == this.trans.LocalAddr()
 }
 
-func (this *RaftNode) Peers() ([]net.Addr, error) {
+func (this *ClusterRaftAgent) Peers() ([]net.Addr, error) {
 	return this.peers.Peers()
 }
 
@@ -195,6 +197,7 @@ type MockSnapshot struct {
 }
 
 func (m *MockFSM) Apply(log *raft.Log) interface{} {
+	fmt.Println("FSM.Apply######### data:", string(log.Data))
 	m.Lock()
 	defer m.Unlock()
 	m.logs = append(m.logs, log.Data)
@@ -202,12 +205,14 @@ func (m *MockFSM) Apply(log *raft.Log) interface{} {
 }
 
 func (m *MockFSM) Snapshot() (raft.FSMSnapshot, error) {
+	fmt.Println("FSM.Snapshoting####")
 	m.Lock()
 	defer m.Unlock()
 	return &MockSnapshot{m.logs, len(m.logs)}, nil
 }
 
 func (m *MockFSM) Restore(inp io.ReadCloser) error {
+	fmt.Println("FSM.Restore###")
 	m.Lock()
 	defer m.Unlock()
 	defer inp.Close()
@@ -219,6 +224,7 @@ func (m *MockFSM) Restore(inp io.ReadCloser) error {
 }
 
 func (m *MockSnapshot) Persist(sink raft.SnapshotSink) error {
+	fmt.Println("MockSnapshot~~~~~~~~~Persist")
 	hd := codec.MsgpackHandle{}
 	enc := codec.NewEncoder(sink, &hd)
 	if err := enc.Encode(m.logs[:m.maxIndex]); err != nil {

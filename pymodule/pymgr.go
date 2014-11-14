@@ -2,6 +2,7 @@ package pymodule
 
 import (
 	"encoding/base64"
+	"fmt"
 	"log"
 	"time"
 
@@ -20,11 +21,12 @@ const (
 )
 
 type PyMgr struct {
-	recvChan      chan *proto.Passpack
-	sendChan      chan *proto.Passpack
-	httpChan      chan *network.HttpReq
-	nodeEventChan chan network.NodeEvent
-	pm            *network.Postman
+	recvChan chan *proto.Passpack
+	sendChan chan *proto.Passpack
+	httpChan chan *network.HttpReq
+
+	pm *network.Postman
+	cn *network.ClusterNode
 
 	glue *py.Module
 
@@ -38,13 +40,13 @@ type PyMgr struct {
 func NewPyMgr(in chan *proto.Passpack,
 	out chan *proto.Passpack,
 	http_req_chan chan *network.HttpReq,
-	node_event_chan chan network.NodeEvent) *PyMgr {
+	cn *network.ClusterNode) *PyMgr {
 
 	mgr := &PyMgr{recvChan: in,
-		httpChan:      http_req_chan,
-		nodeEventChan: node_event_chan,
-		sendChan:      out,
-		pm:            network.NewPostman()}
+		httpChan: http_req_chan,
+		sendChan: out,
+		cn:       cn,
+		pm:       network.NewPostman()}
 	var err error
 	mgr.gomo = NewGoModule(out, mgr.pm)
 	mgr.gomod, err = py.NewGoModule("go", "", mgr.gomo)
@@ -98,7 +100,7 @@ func (this *PyMgr) Start() {
 			this.onPostDone(post_ret.Sn, <-post_ret.Ret)
 		case req := <-this.httpChan:
 			req.Ret <- this.onHttpReq(req.Req, req.Url)
-		case ev := <-this.nodeEventChan:
+		case ev := <-this.cn.NodeEventChan:
 			this.onClusterNodeEvent(ev)
 		}
 	}
@@ -156,6 +158,10 @@ func (this *PyMgr) onHttpReq(jn, url string) string {
 	py_url := py.NewString(url)
 	defer py_url.Decref()
 	r, err := this.glue.CallMethodObjArgs("OnHttpReq", py_jn.Obj(), py_url.Obj())
+
+	//test
+	fmt.Println("http-req-raft-apply")
+	this.cn.RaftAgent.Raft.Apply([]byte(jn), 30*time.Second)
 
 	if err != nil {
 		log.Println("onHttpReq err:", err)

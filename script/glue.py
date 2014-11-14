@@ -74,8 +74,8 @@ def OnClusterNodeEvent(ev_type, node_name):
         # become leader
         if ev_type == 3:
             LeaderTimer.OnBecomeLeader()
-            import testing
-            testing.testLeaderTimer()
+            #import testing
+            #testing.testLeaderTimer()
         elif ev_type == 4:
             LeaderTimer.OnHandoffLeader()
     except Exception as err:
@@ -84,8 +84,6 @@ def OnClusterNodeEvent(ev_type, node_name):
 
 def test_script():
     log.debug("testtestbanbang")
-    import testing
-    testing.testLeaderTimer()
 
 
 def packProto(uri, data):
