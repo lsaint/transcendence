@@ -1,6 +1,6 @@
 # -*- coding: utf8 -*-
 
-import base64
+import base64, random
 import sal, salcb, go
 from timer import g_timer, g_leadertimer
 from logic_pb2 import *
@@ -55,4 +55,10 @@ def func():
     print("leader timer tick tack. tick tack..")
 def testLeaderTimer():
     g_leadertimer.SetLeaderTimer(5, func)
+
+
+
+import raft
+def testRaftApply():
+    raft.apply("hello raft %d" % (random.randint(1, 1000)))
 

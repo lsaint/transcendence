@@ -2,7 +2,6 @@ package pymodule
 
 import (
 	"encoding/base64"
-	"fmt"
 	"log"
 	"time"
 
@@ -10,6 +9,7 @@ import (
 	"transcendence/network"
 	"transcendence/proto"
 
+	"github.com/hashicorp/raft"
 	"github.com/qiniu/py"
 )
 
@@ -35,6 +35,7 @@ type PyMgr struct {
 	logmod   py.GoModule
 	redismod py.GoModule
 	salmod   py.GoModule
+	raftmod  py.GoModule
 }
 
 func NewPyMgr(in chan *proto.Passpack,
@@ -67,6 +68,11 @@ func NewPyMgr(in chan *proto.Passpack,
 	mgr.salmod, err = py.NewGoModule("sal", "", NewSalModule(conf.CF.SVCTYPE))
 	if err != nil {
 		log.Fatalln("ExecCodeModule sal err:", err)
+	}
+
+	mgr.raftmod, err = py.NewGoModule("raft", "", NewRaftModule(cn))
+	if err != nil {
+		log.Fatalln("NewRaftModule failed:", err)
 	}
 
 	code, err := py.CompileFile("./script/glue.py", py.FileInput)
@@ -102,6 +108,8 @@ func (this *PyMgr) Start() {
 			req.Ret <- this.onHttpReq(req.Req, req.Url)
 		case ev := <-this.cn.NodeEventChan:
 			this.onClusterNodeEvent(ev)
+		case rlog := <-this.cn.RaftAgent.ApplyCh:
+			this.onRaftApply(rlog)
 		}
 	}
 }
@@ -159,10 +167,6 @@ func (this *PyMgr) onHttpReq(jn, url string) string {
 	defer py_url.Decref()
 	r, err := this.glue.CallMethodObjArgs("OnHttpReq", py_jn.Obj(), py_url.Obj())
 
-	//test
-	fmt.Println("http-req-raft-apply")
-	this.cn.RaftAgent.Raft.Apply([]byte(jn), 30*time.Second)
-
 	if err != nil {
 		log.Println("onHttpReq err:", err)
 		return ""
@@ -192,5 +196,15 @@ func (this *PyMgr) onClusterNodeEvent(ev network.NodeEvent) {
 	_, err := this.glue.CallMethodObjArgs("OnClusterNodeEvent", py_ev_type.Obj(), py_node_name.Obj())
 	if err != nil {
 		log.Println("OnClusterNodeEvent err:", err)
+	}
+}
+
+func (this *PyMgr) onRaftApply(rlog *raft.Log) {
+	py_data := py.NewString(string(rlog.Data))
+	defer py_data.Decref()
+
+	_, err := this.glue.CallMethodObjArgs("OnRaftApply", py_data.Obj())
+	if err != nil {
+		log.Println("OnRaftApply err:", err)
 	}
 }

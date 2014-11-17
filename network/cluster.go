@@ -40,9 +40,10 @@ type ClusterNode struct {
 func NewClusterNode() *ClusterNode {
 	ch := make(chan NodeEvent, 1024)
 	node := &ClusterNode{NodeEventChan: ch}
+	applyCh := make(chan *raft.Log, 1024)
 
 	// raft
-	node.RaftAgent = NewClusterRaftAgent()
+	node.RaftAgent = NewClusterRaftAgent(applyCh)
 	go node.notifyLeader(node.RaftAgent.LeaderCh)
 
 	// memberlist
@@ -128,11 +129,12 @@ type ClusterRaftAgent struct {
 
 	Raft     *raft.Raft
 	LeaderCh <-chan bool
+	ApplyCh  chan *raft.Log
 }
 
-func NewClusterRaftAgent() *ClusterRaftAgent {
+func NewClusterRaftAgent(applyCh chan *raft.Log) *ClusterRaftAgent {
 	var err error
-	node := &ClusterRaftAgent{}
+	node := &ClusterRaftAgent{ApplyCh: applyCh}
 	path := conf.CF.RAFT_DIR
 
 	dbSize := uint64(8 * 1024 * 1024)
@@ -143,7 +145,7 @@ func NewClusterRaftAgent() *ClusterRaftAgent {
 
 	config := raft.DefaultConfig()
 	config.EnableSingleNode = true
-	config.SnapshotInterval = 20 * time.Second
+	config.SnapshotInterval = 30 * time.Second
 	config.SnapshotThreshold = 1
 	file, err := os.Create(fmt.Sprintf("%vlogoutput", path))
 	if err != nil {
@@ -157,7 +159,7 @@ func NewClusterRaftAgent() *ClusterRaftAgent {
 		log.Fatalln("trans err", err)
 	}
 
-	snapshotsRetained := 20
+	snapshotsRetained := 2
 	snapshots, err := raft.NewFileSnapshotStore(path, snapshotsRetained, config.LogOutput)
 	if err != nil {
 		log.Fatalln("snapshots err", err)
@@ -165,7 +167,7 @@ func NewClusterRaftAgent() *ClusterRaftAgent {
 
 	node.peers = raft.NewJSONPeers(path, node.trans)
 
-	fsm := &MockFSM{}
+	fsm := &FSM{ApplyCh: applyCh}
 
 	node.Raft, err = raft.NewRaft(config, fsm, store, store, snapshots, node.peers, node.trans)
 	if err != nil {
@@ -184,34 +186,34 @@ func (this *ClusterRaftAgent) Peers() ([]net.Addr, error) {
 	return this.peers.Peers()
 }
 
-// MockFSM is an implementation of the FSM interface, and just stores
-// the logs sequentially
-type MockFSM struct {
+type FSM struct {
 	sync.Mutex
-	logs [][]byte
+	logs    [][]byte
+	ApplyCh chan *raft.Log
 }
 
-type MockSnapshot struct {
+type FSMSnapshot struct {
 	logs     [][]byte
 	maxIndex int
 }
 
-func (m *MockFSM) Apply(log *raft.Log) interface{} {
-	fmt.Println("FSM.Apply######### data:", string(log.Data))
+func (m *FSM) Apply(log *raft.Log) interface{} {
+	//fmt.Println("FSM.Apply.Data:", string(log.Data))
+	m.ApplyCh <- log
 	m.Lock()
 	defer m.Unlock()
 	m.logs = append(m.logs, log.Data)
 	return len(m.logs)
 }
 
-func (m *MockFSM) Snapshot() (raft.FSMSnapshot, error) {
+func (m *FSM) Snapshot() (raft.FSMSnapshot, error) {
 	fmt.Println("FSM.Snapshoting####")
 	m.Lock()
 	defer m.Unlock()
-	return &MockSnapshot{m.logs, len(m.logs)}, nil
+	return &FSMSnapshot{m.logs, len(m.logs)}, nil
 }
 
-func (m *MockFSM) Restore(inp io.ReadCloser) error {
+func (m *FSM) Restore(inp io.ReadCloser) error {
 	fmt.Println("FSM.Restore###")
 	m.Lock()
 	defer m.Unlock()
@@ -223,8 +225,8 @@ func (m *MockFSM) Restore(inp io.ReadCloser) error {
 	return dec.Decode(&m.logs)
 }
 
-func (m *MockSnapshot) Persist(sink raft.SnapshotSink) error {
-	fmt.Println("MockSnapshot~~~~~~~~~Persist")
+func (m *FSMSnapshot) Persist(sink raft.SnapshotSink) error {
+	fmt.Println("FSMSnapshot~~~~~~~~~Persist")
 	hd := codec.MsgpackHandle{}
 	enc := codec.NewEncoder(sink, &hd)
 	if err := enc.Encode(m.logs[:m.maxIndex]); err != nil {
@@ -235,9 +237,9 @@ func (m *MockSnapshot) Persist(sink raft.SnapshotSink) error {
 	return nil
 }
 
-func (m *MockSnapshot) Release() {
+func (m *FSMSnapshot) Release() {
 }
 
-func (m MockSnapshot) Write(p []byte) (n int, err error) {
+func (m FSMSnapshot) Write(p []byte) (n int, err error) {
 	return
 }

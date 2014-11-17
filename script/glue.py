@@ -61,6 +61,9 @@ def OnHttpReq(jn, url):
     log.debug("OnHttpReq--> json: %s, url: %s" % (jn, url))
     # test
     import testing
+
+    testing.testRaftApply()
+
     if url == "/transcendence1":
         testing.simulateSalClientProto()
     else:
@@ -80,6 +83,10 @@ def OnClusterNodeEvent(ev_type, node_name):
             LeaderTimer.OnHandoffLeader()
     except Exception as err:
         log.error("%s-%s" % ("OnClusterNodeEvent", traceback.format_exc()))
+
+
+def OnRaftApply(data):
+    print "OnRaftApply:", data
 
 
 def test_script():
