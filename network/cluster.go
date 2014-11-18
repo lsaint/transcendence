@@ -74,7 +74,6 @@ func NewClusterNode() *ClusterNode {
 }
 
 func (c *ClusterNode) NotifyJoin(n *memberlist.Node) {
-	log.Println("NotifyJoin")
 	addr := &net.TCPAddr{IP: n.Addr, Port: int(n.Port) + 100}
 	c.NodeEventChan <- NodeEvent{NodeJoin, n}
 	if c.RaftAgent.IsLeader() {
@@ -87,13 +86,6 @@ func (c *ClusterNode) NotifyJoin(n *memberlist.Node) {
 
 func (c *ClusterNode) NotifyLeave(n *memberlist.Node) {
 	c.NodeEventChan <- NodeEvent{NodeLeave, n}
-	//if c.RaftAgent.IsLeader() {
-	// 	addr := &net.TCPAddr{IP: n.Addr, Port: int(n.Port) + 100}
-	//	future := c.RaftAgent.Raft.RemovePeer(addr)
-	//	if err := future.Error(); err != nil {
-	//		log.Println("[CLUSTER] remove peer fail", addr, err)
-	//	}
-	//}
 }
 
 func (c *ClusterNode) NotifyUpdate(n *memberlist.Node) {
@@ -207,14 +199,14 @@ func (m *FSM) Apply(log *raft.Log) interface{} {
 }
 
 func (m *FSM) Snapshot() (raft.FSMSnapshot, error) {
-	fmt.Println("FSM.Snapshoting####")
+	fmt.Println("FSM.Snapshoting")
 	m.Lock()
 	defer m.Unlock()
 	return &FSMSnapshot{m.logs, len(m.logs)}, nil
 }
 
 func (m *FSM) Restore(inp io.ReadCloser) error {
-	fmt.Println("FSM.Restore###")
+	fmt.Println("###FSM.Restore###")
 	m.Lock()
 	defer m.Unlock()
 	defer inp.Close()
@@ -226,7 +218,7 @@ func (m *FSM) Restore(inp io.ReadCloser) error {
 }
 
 func (m *FSMSnapshot) Persist(sink raft.SnapshotSink) error {
-	fmt.Println("FSMSnapshot~~~~~~~~~Persist")
+	fmt.Println("FSMSnapshot.Persist")
 	hd := codec.MsgpackHandle{}
 	enc := codec.NewEncoder(sink, &hd)
 	if err := enc.Encode(m.logs[:m.maxIndex]); err != nil {

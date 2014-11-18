@@ -1,0 +1,7 @@
+# -*- coding: utf-8 -*-
+
+EV_NODE_JOIN = 0
+EV_NODE_LEAVE = 1
+EV_NODE_UPDATE = 2
+EV_NODE_BE_LEADER = 3
+EV_NODE_OFF_LEADER = 4

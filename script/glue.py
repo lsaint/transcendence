@@ -7,6 +7,7 @@ import log, go, post, sal
 
 from timer import Timer, LeaderTimer
 from config import *
+from const import *
 
 
 
@@ -59,27 +60,28 @@ def OnPostDone(sn, ret):
 
 def OnHttpReq(jn, url):
     log.debug("OnHttpReq--> json: %s, url: %s" % (jn, url))
+
     # test
     import testing
-
     testing.testRaftApply()
 
-    if url == "/transcendence1":
-        testing.simulateSalClientProto()
-    else:
-        testing.simulateSendProtoToClient()
+    #if url == "/transcendence1":
+    #    testing.simulateSalClientProto()
+    #else:
+    #    testing.simulateSendProtoToClient()
+
     return "return " + url
 
 
 def OnClusterNodeEvent(ev_type, node_name):
-    print "------------------>OnClusterNodeEvent", ev_type, node_name
+    print "----->OnClusterNodeEvent<----", ev_type, node_name
     try:
         # become leader
-        if ev_type == 3:
+        if ev_type == EV_NODE_BE_LEADER:
             LeaderTimer.OnBecomeLeader()
             #import testing
             #testing.testLeaderTimer()
-        elif ev_type == 4:
+        elif ev_type == EV_NODE_OFF_LEADER:
             LeaderTimer.OnHandoffLeader()
     except Exception as err:
         log.error("%s-%s" % ("OnClusterNodeEvent", traceback.format_exc()))
