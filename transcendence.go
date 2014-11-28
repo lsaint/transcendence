@@ -20,7 +20,7 @@ func handleSig() {
 	signal.Notify(c, os.Interrupt, syscall.SIGTERM)
 
 	for sig := range c {
-		log.Println("__handle__signal__", sig)
+		log.Println("ABORT BY", sig)
 		return
 	}
 }

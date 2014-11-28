@@ -15,10 +15,11 @@ type GoModule struct {
 	sendChan chan *proto.Passpack
 	pm       *network.Postman
 	isLeader bool
+	taskmgr	*TaskMgr
 }
 
-func NewGoModule(out chan *proto.Passpack, pm *network.Postman) *GoModule {
-	mod := &GoModule{sendChan: out, pm: pm, isLeader: false}
+func NewGoModule(out chan *proto.Passpack, pm *network.Postman, taskmgr *TaskMgr) *GoModule {
+	mod := &GoModule{sendChan: out, pm: pm, isLeader: false, taskmgr: taskmgr}
 	return mod
 }
 
@@ -66,4 +67,25 @@ func (this *GoModule) Py_IsLeader(args *py.Tuple) (ret *py.Base, err error) {
 	} else {
 		return py.NewInt(0).Obj(), nil
 	}
+}
+
+func (this *GoModule) Py_GetTask(args *py.Tuple) (*py.Base, error) {
+	lt := this.taskmgr.GetTask()
+	all := py.NewTuple(len(lt))
+	//defer all.Decref()
+	for i, task := range lt {
+		item := py.NewTuple(1 + len(task.Args))
+		item.SetItem(0, task.Name)
+		//defer task.Name.Decref()
+		if task.Args != nil {
+			for j, arg := range task.Args {
+				arg.Decref()
+				item.SetItem(j+1, arg)
+			}
+		}
+		all.SetItem(i, item.Obj())
+		//defer item.Decref()
+	}
+	//fmt.Println("all", all)
+	return all.Obj(), nil
 }

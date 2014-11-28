@@ -62,3 +62,37 @@ import raft
 def testRaftApply():
     raft.apply("hello raft %d" % (random.randint(1, 1000)))
 
+
+import select, os
+def testEpoll(fd):
+    epoll = select.epoll()
+    epoll.register(fd, select.EPOLLIN)
+    while True:
+        events = epoll.poll(1)
+        for fileno, event in events:
+            print "!!!!!!! on epoll event", fileno, event
+
+
+def testKqueue(fd):
+    import signal
+    kq = select.kqueue()
+    kevent = select.kevent(signal.SIGUSR1, filter=select.KQ_FILTER_SIGNAL,
+                            flags=select.KQ_EV_ADD | select.KQ_EV_ENABLE)
+    while True:
+        revents = kq.control([kevent], 1, None)  # block
+        for event in revents:
+            #print "!!!!!! on kqueue event", event
+            if (event.filter == select.KQ_FILTER_SIGNAL):
+                task = go.GetTask()
+                print "task", task
+
+
+def testSignal():
+    import signal
+    def myHandler(signum, frame):
+        print "!!!!!", signum, frame
+    signal.signal(signal.SIGUSR1, myHandler) 
+    signal.pause()
+    print "after pause"
+
+
