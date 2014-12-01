@@ -3,7 +3,7 @@
 import sys; sys.path.extend(["./conf/", "./proto/", "./script/", "./tools/"])
 import traceback, struct
 import server_pb2, logic_pb2
-import log, go, post, sal
+import log, go, post
 
 from timer import Timer, LeaderTimer
 from config import *
@@ -101,8 +101,12 @@ def packProto(uri, data):
 
 
 def main(fd):
-    print "#*-> main <-*#"
-    import testing
-    testing.testKqueue(fd)
+    print "#*-> main <-*#", fd
+    try:
+        pymain(fd)
+    except Exception as err:
+        log.error("%s-%s" % ("main", traceback.format_exc()))
 
-
+import testing
+def pymain(fd):
+    testing.testEpoll(fd)

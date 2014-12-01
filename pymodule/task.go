@@ -1,8 +1,12 @@
 package pymodule
 
+//#include <sys/eventfd.h>
+import "C"
 import (
 	"container/list"
+	"encoding/binary"
 	"os"
+	"runtime"
 	"sync"
 	"syscall"
 
@@ -17,22 +21,35 @@ type Task struct {
 type TaskMgr struct {
 	sync.RWMutex
 	task_queue *list.List
+	fd         int64
+	buf        []byte
 }
 
 func NewTaskMgr() *TaskMgr {
 	task_queue := list.New()
 
-	mgr := &TaskMgr{task_queue: task_queue}
+	fd := int64(0)
+	if runtime.GOOS == "linux" {
+		fd = int64(C.eventfd(0, 0))
+	}
+	mgr := &TaskMgr{task_queue: task_queue,
+		buf: make([]byte, 8),
+		fd:  fd}
 
 	return mgr
 }
 
 func (this *TaskMgr) GetFd() int64 {
-	return 0
+	return this.fd
 }
 
 func (this *TaskMgr) Notify() {
-	syscall.Kill(os.Getpid(), syscall.SIGUSR1)
+	if runtime.GOOS == "linux" {
+		binary.PutUvarint(this.buf, 1)
+		syscall.Write(int(this.fd), this.buf)
+	} else {
+		syscall.Kill(os.Getpid(), syscall.SIGUSR1)
+	}
 }
 
 func (this *TaskMgr) GetTask() []*Task {

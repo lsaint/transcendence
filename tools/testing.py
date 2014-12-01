@@ -1,7 +1,8 @@
 # -*- coding: utf8 -*-
 
 import base64, random
-import sal, salcb, go
+#import sal, salcb
+import go
 from timer import g_timer, g_leadertimer
 from logic_pb2 import *
 from server_pb2 import *
@@ -63,14 +64,16 @@ def testRaftApply():
     raft.apply("hello raft %d" % (random.randint(1, 1000)))
 
 
-import select, os
+import select, os, struct
 def testEpoll(fd):
     epoll = select.epoll()
     epoll.register(fd, select.EPOLLIN)
     while True:
         events = epoll.poll(1)
         for fileno, event in events:
-            print "!!!!!!! on epoll event", fileno, event
+            task = go.GetTask()
+            ret = os.read(fd, 8)
+            print "read fd", struct.unpack("Q", ret)[0]
 
 
 def testKqueue(fd):
