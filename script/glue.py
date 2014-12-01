@@ -97,3 +97,12 @@ def test_script():
 
 def packProto(uri, data):
     return "%s%s" % (struct.pack("II", len(data) + 8, uri), data)
+
+
+
+def main(fd):
+    print "#*-> main <-*#"
+    import testing
+    testing.testKqueue(fd)
+
+

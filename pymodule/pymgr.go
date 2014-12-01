@@ -5,7 +5,7 @@ import (
 	"log"
 	"time"
 
-	"transcendence/conf"
+	//"transcendence/conf"
 	"transcendence/network"
 	"transcendence/proto"
 
@@ -28,7 +28,8 @@ type PyMgr struct {
 	pm *network.Postman
 	cn *network.ClusterNode
 
-	glue *py.Module
+	taskmgr *TaskMgr
+	glue    *py.Module
 
 	gomo     *GoModule
 	gomod    py.GoModule
@@ -47,9 +48,10 @@ func NewPyMgr(in chan *proto.Passpack,
 		httpChan: http_req_chan,
 		sendChan: out,
 		cn:       cn,
+		taskmgr:  NewTaskMgr(),
 		pm:       network.NewPostman()}
 	var err error
-	mgr.gomo = NewGoModule(out, mgr.pm)
+	mgr.gomo = NewGoModule(out, mgr.pm, mgr.taskmgr)
 	mgr.gomod, err = py.NewGoModule("go", "", mgr.gomo)
 	if err != nil {
 		log.Fatalln("NewGoModule failed:", err)
@@ -65,10 +67,10 @@ func NewPyMgr(in chan *proto.Passpack,
 		log.Fatalln("NewRedisModule failed:", err)
 	}
 
-	mgr.salmod, err = py.NewGoModule("sal", "", NewSalModule(conf.CF.SVCTYPE))
-	if err != nil {
-		log.Fatalln("ExecCodeModule sal err:", err)
-	}
+	//mgr.salmod, err = py.NewGoModule("sal", "", NewSalModule(conf.CF.SVCTYPE))
+	//if err != nil {
+	//	log.Fatalln("ExecCodeModule sal err:", err)
+	//}
 
 	mgr.raftmod, err = py.NewGoModule("raft", "", NewRaftModule(cn))
 	if err != nil {
@@ -87,6 +89,13 @@ func NewPyMgr(in chan *proto.Passpack,
 	}
 
 	_, err = mgr.glue.CallMethodObjArgs("test_script")
+
+	go func() {
+		fd := py.NewInt64(mgr.taskmgr.GetFd())
+		fd.Decref()
+		mgr.glue.CallMethodObjArgs("main", fd.Obj())
+	}()
+
 	// defer mgr.pymode.Decref()
 	if err != nil {
 		log.Fatalln("ExecCodeModule failed:", err)
@@ -100,16 +109,16 @@ func (this *PyMgr) Start() {
 		select {
 		case <-ticker:
 			this.onTicker()
-		case pack := <-this.recvChan:
-			this.onProto(pack)
-		case post_ret := <-this.pm.DoneChan:
-			this.onPostDone(post_ret.Sn, <-post_ret.Ret)
-		case req := <-this.httpChan:
-			req.Ret <- this.onHttpReq(req.Req, req.Url)
-		case ev := <-this.cn.NodeEventChan:
-			this.onClusterNodeEvent(ev)
-		case rlog := <-this.cn.RaftAgent.ApplyCh:
-			this.onRaftApply(rlog)
+			//case pack := <-this.recvChan:
+			//	this.onProto(pack)
+			//case post_ret := <-this.pm.DoneChan:
+			//	this.onPostDone(post_ret.Sn, <-post_ret.Ret)
+			//case req := <-this.httpChan:
+			//	req.Ret <- this.onHttpReq(req.Req, req.Url)
+			//case ev := <-this.cn.NodeEventChan:
+			//	this.onClusterNodeEvent(ev)
+			//case rlog := <-this.cn.RaftAgent.ApplyCh:
+			//	this.onRaftApply(rlog)
 		}
 	}
 }
@@ -145,9 +154,18 @@ func (this *PyMgr) onProto(pack *proto.Passpack) {
 }
 
 func (this *PyMgr) onTicker() {
-	if _, err := this.glue.CallMethodObjArgs("OnTicker"); err != nil {
-		log.Println("onTicker err:", err)
-	}
+	//if _, err := this.glue.CallMethodObjArgs("OnTicker"); err != nil {
+	//	log.Println("onTicker err:", err)
+	//}
+
+	// --
+
+	log.Println("onTicker")
+
+	n := py.NewString("OnTicker")
+	task := &Task{Name: n.Obj()}
+	this.taskmgr.PushTask(task)
+
 }
 
 func (this *PyMgr) onPostDone(sn int64, ret string) {
