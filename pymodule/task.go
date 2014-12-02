@@ -1,6 +1,10 @@
 package pymodule
 
+//#ifdef __linux__
 //#include <sys/eventfd.h>
+//#else
+//int eventfd(unsigned int initval, int flags){return 0;}
+//#endif
 import "C"
 import (
 	"container/list"
@@ -28,13 +32,9 @@ type TaskMgr struct {
 func NewTaskMgr() *TaskMgr {
 	task_queue := list.New()
 
-	fd := int64(0)
-	if runtime.GOOS == "linux" {
-		fd = int64(C.eventfd(0, 0))
-	}
 	mgr := &TaskMgr{task_queue: task_queue,
 		buf: make([]byte, 8),
-		fd:  fd}
+		fd:  int64(C.eventfd(0, 0))}
 
 	return mgr
 }

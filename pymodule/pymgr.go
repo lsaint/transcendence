@@ -41,13 +41,12 @@ type PyMgr struct {
 
 func NewPyMgr(in chan *proto.Passpack,
 	out chan *proto.Passpack,
-	http_req_chan chan *network.HttpReq,
-	cn *network.ClusterNode) *PyMgr {
+	http_req_chan chan *network.HttpReq) *PyMgr {
 
 	mgr := &PyMgr{recvChan: in,
 		httpChan: http_req_chan,
 		sendChan: out,
-		cn:       cn,
+		cn:       network.NewClusterNode(),
 		taskmgr:  NewTaskMgr(),
 		pm:       network.NewPostman()}
 	var err error
@@ -72,7 +71,7 @@ func NewPyMgr(in chan *proto.Passpack,
 	//	log.Fatalln("ExecCodeModule sal err:", err)
 	//}
 
-	mgr.raftmod, err = py.NewGoModule("raft", "", NewRaftModule(cn))
+	mgr.raftmod, err = py.NewGoModule("raft", "", NewRaftModule(mgr.cn))
 	if err != nil {
 		log.Fatalln("NewRaftModule failed:", err)
 	}

@@ -99,14 +99,23 @@ def packProto(uri, data):
     return "%s%s" % (struct.pack("II", len(data) + 8, uri), data)
 
 
-
+import thread, time
 def main(fd):
     print "#*-> main <-*#", fd
     try:
-        pymain(fd)
+        thread.start_new_thread(pymain, ())
+        loop(fd)
     except Exception as err:
         log.error("%s-%s" % ("main", traceback.format_exc()))
 
+
 import testing
-def pymain(fd):
-    testing.testEpoll(fd)
+def loop(fd):
+    testing.testEventNotify(fd)
+
+
+def pymain():
+    print "pymain start", go.GetTask()
+    time.sleep(10)
+    print "pymain end"
+

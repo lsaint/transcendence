@@ -76,7 +76,7 @@ def testEpoll(fd):
             print "read fd", struct.unpack("Q", ret)[0]
 
 
-def testKqueue(fd):
+def testKqueue():
     import signal
     kq = select.kqueue()
     kevent = select.kevent(signal.SIGUSR1, filter=select.KQ_FILTER_SIGNAL,
@@ -90,12 +90,10 @@ def testKqueue(fd):
                 print "task", task
 
 
-def testSignal():
-    import signal
-    def myHandler(signum, frame):
-        print "!!!!!", signum, frame
-    signal.signal(signal.SIGUSR1, myHandler) 
-    signal.pause()
-    print "after pause"
-
+def testEventNotify(fd):
+    import platform
+    if platform.system() == "Linux":
+        testEpoll(fd)
+    else:
+        testKqueue()
 
