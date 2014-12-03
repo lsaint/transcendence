@@ -157,10 +157,6 @@ func (this *PyMgr) onTicker() {
 	//	log.Println("onTicker err:", err)
 	//}
 
-	// --
-
-	log.Println("onTicker")
-
 	n := py.NewString("OnTicker")
 	task := &Task{Name: n.Obj()}
 	this.taskmgr.PushTask(task)

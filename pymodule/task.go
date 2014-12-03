@@ -31,9 +31,11 @@ type TaskMgr struct {
 
 func NewTaskMgr() *TaskMgr {
 	task_queue := list.New()
+	buf := make([]byte, 8)
+	binary.PutUvarint(buf, 1)
 
 	mgr := &TaskMgr{task_queue: task_queue,
-		buf: make([]byte, 8),
+		buf: buf,
 		fd:  int64(C.eventfd(0, 0))}
 
 	return mgr
@@ -45,7 +47,6 @@ func (this *TaskMgr) GetFd() int64 {
 
 func (this *TaskMgr) Notify() {
 	if runtime.GOOS == "linux" {
-		binary.PutUvarint(this.buf, 1)
 		syscall.Write(int(this.fd), this.buf)
 	} else {
 		syscall.Kill(os.Getpid(), syscall.SIGUSR1)

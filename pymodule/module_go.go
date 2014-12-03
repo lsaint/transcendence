@@ -15,7 +15,7 @@ type GoModule struct {
 	sendChan chan *proto.Passpack
 	pm       *network.Postman
 	isLeader bool
-	taskmgr	*TaskMgr
+	taskmgr  *TaskMgr
 }
 
 func NewGoModule(out chan *proto.Passpack, pm *network.Postman, taskmgr *TaskMgr) *GoModule {
