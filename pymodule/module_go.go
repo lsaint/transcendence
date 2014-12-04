@@ -11,15 +11,24 @@ import (
 	pb "code.google.com/p/goprotobuf/proto"
 )
 
+type DecrefAble interface {
+	Decref()
+}
+
 type GoModule struct {
-	sendChan chan *proto.Passpack
-	pm       *network.Postman
-	isLeader bool
-	taskmgr  *TaskMgr
+	sendChan    chan *proto.Passpack
+	pm          *network.Postman
+	isLeader    bool
+	taskmgr     *TaskMgr
+	decrefLater []DecrefAble
 }
 
 func NewGoModule(out chan *proto.Passpack, pm *network.Postman, taskmgr *TaskMgr) *GoModule {
-	mod := &GoModule{sendChan: out, pm: pm, isLeader: false, taskmgr: taskmgr}
+	mod := &GoModule{sendChan: out,
+		pm:          pm,
+		isLeader:    false,
+		taskmgr:     taskmgr,
+		decrefLater: make([]DecrefAble, 0)}
 	return mod
 }
 
@@ -72,20 +81,34 @@ func (this *GoModule) Py_IsLeader(args *py.Tuple) (ret *py.Base, err error) {
 func (this *GoModule) Py_GetTask(args *py.Tuple) (*py.Base, error) {
 	lt := this.taskmgr.GetTask()
 	all := py.NewTuple(len(lt))
-	//defer all.Decref()
 	for i, task := range lt {
+		fmt.Printf("task.Name pointer: %p\n", task.Name)
 		item := py.NewTuple(1 + len(task.Args))
 		item.SetItem(0, task.Name)
-		//defer task.Name.Decref()
+		this.deferDecref(task.Name)
 		if task.Args != nil {
 			for j, arg := range task.Args {
-				arg.Decref()
+				fmt.Println("arg---", arg)
+				this.deferDecref(arg)
 				item.SetItem(j+1, arg)
 			}
 		}
 		all.SetItem(i, item.Obj())
-		//defer item.Decref()
+		this.deferDecref(item)
 	}
-	//fmt.Println("all", all)
+	//this.deferDecref(all)
 	return all.Obj(), nil
+}
+
+func (this *GoModule) deferDecref(obj DecrefAble) {
+	this.decrefLater = append(this.decrefLater, obj)
+}
+
+func (this *GoModule) Py_ClearTask(args *py.Tuple) (*py.Base, error) {
+	for _, obj := range this.decrefLater {
+		fmt.Println("obj", obj)
+		obj.Decref()
+	}
+	this.decrefLater = this.decrefLater[:0]
+	return py.IncNone(), nil
 }

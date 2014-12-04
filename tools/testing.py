@@ -74,6 +74,8 @@ def testEpoll(fd):
             task = go.GetTask()
             ret = os.read(fd, 8)
             print "read fd", struct.unpack("Q", ret)[0]
+            # do task
+            # clear task
 
 
 def testKqueue():
@@ -84,10 +86,10 @@ def testKqueue():
     while True:
         revents = kq.control([kevent], 1, None)  # block
         for event in revents:
-            #print "!!!!!! on kqueue event", event
             if (event.filter == select.KQ_FILTER_SIGNAL):
                 task = go.GetTask()
-                print "task", task
+                print "py-task", task, id(task)
+                go.ClearTask()
 
 
 def testEventNotify(fd):

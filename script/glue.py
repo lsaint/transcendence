@@ -115,7 +115,7 @@ def loop(fd):
 
 
 def pymain():
-    print "pymain start", go.GetTask()
+    print "pymain start"
     time.sleep(10)
     print "pymain end"
 
