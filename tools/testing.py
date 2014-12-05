@@ -64,7 +64,7 @@ def testRaftApply():
     raft.apply("hello raft %d" % (random.randint(1, 1000)))
 
 
-import select, os, struct
+import select, os, struct, sys
 def testEpoll(fd):
     epoll = select.epoll()
     epoll.register(fd, select.EPOLLIN)
@@ -87,9 +87,7 @@ def testKqueue():
         revents = kq.control([kevent], 1, None)  # block
         for event in revents:
             if (event.filter == select.KQ_FILTER_SIGNAL):
-                task = go.GetTask()
-                print "py-task", task, id(task)
-                go.ClearTask()
+                go.DoTask()
 
 
 def testEventNotify(fd):

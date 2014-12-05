@@ -47,6 +47,7 @@ def OnTicker():
     try:
         Timer.Update()
         LeaderTimer.Update()
+        print "py-timer update"
     except Exception as err:
         log.error("%s-%s" % ("OnTicker", traceback.format_exc()))
 
@@ -102,6 +103,7 @@ def packProto(uri, data):
 import thread, time
 def main(fd):
     print "#*-> main <-*#", fd
+    go.PyReady()
     try:
         thread.start_new_thread(pymain, ())
         loop(fd)

@@ -2,6 +2,7 @@ package pymodule
 
 import (
 	"encoding/base64"
+	//"fmt"
 	"log"
 	"time"
 
@@ -28,8 +29,8 @@ type PyMgr struct {
 	pm *network.Postman
 	cn *network.ClusterNode
 
-	taskmgr *TaskMgr
-	glue    *py.Module
+	tw   *TaskWaitress
+	glue *py.Module
 
 	gomo     *GoModule
 	gomod    py.GoModule
@@ -37,20 +38,26 @@ type PyMgr struct {
 	redismod py.GoModule
 	salmod   py.GoModule
 	raftmod  py.GoModule
+
+	waiting chan bool
+	pyready chan bool
 }
 
 func NewPyMgr(in chan *proto.Passpack,
 	out chan *proto.Passpack,
 	http_req_chan chan *network.HttpReq) *PyMgr {
 
+	waiting, pyready := make(chan bool), make(chan bool)
 	mgr := &PyMgr{recvChan: in,
 		httpChan: http_req_chan,
 		sendChan: out,
 		cn:       network.NewClusterNode(),
-		taskmgr:  NewTaskMgr(),
+		tw:       NewTaskWaitress(waiting, pyready),
+		waiting:  waiting,
+		pyready:  pyready,
 		pm:       network.NewPostman()}
 	var err error
-	mgr.gomo = NewGoModule(out, mgr.pm, mgr.taskmgr)
+	mgr.gomo = NewGoModule(out, mgr.pm, mgr.tw)
 	mgr.gomod, err = py.NewGoModule("go", "", mgr.gomo)
 	if err != nil {
 		log.Fatalln("NewGoModule failed:", err)
@@ -90,7 +97,7 @@ func NewPyMgr(in chan *proto.Passpack,
 	_, err = mgr.glue.CallMethodObjArgs("test_script")
 
 	go func() {
-		fd := py.NewInt64(mgr.taskmgr.GetFd())
+		fd := py.NewInt64(mgr.tw.GetFd())
 		fd.Decref()
 		mgr.glue.CallMethodObjArgs("main", fd.Obj())
 	}()
@@ -104,6 +111,7 @@ func NewPyMgr(in chan *proto.Passpack,
 
 func (this *PyMgr) Start() {
 	ticker := time.Tick(1 * time.Second)
+	<-this.pyready
 	for {
 		select {
 		case <-ticker:
@@ -153,14 +161,11 @@ func (this *PyMgr) onProto(pack *proto.Passpack) {
 }
 
 func (this *PyMgr) onTicker() {
-	//if _, err := this.glue.CallMethodObjArgs("OnTicker"); err != nil {
-	//	log.Println("onTicker err:", err)
-	//}
-
-	n := py.NewString("OnTicker")
-	task := &Task{Name: n.Obj()}
-	this.taskmgr.PushTask(task)
-
+	this.wait()
+	if _, err := this.glue.CallMethodObjArgs("OnTicker"); err != nil {
+		log.Println("onTicker err:", err)
+	}
+	this.done()
 }
 
 func (this *PyMgr) onPostDone(sn int64, ret string) {
@@ -210,6 +215,15 @@ func (this *PyMgr) onClusterNodeEvent(ev network.NodeEvent) {
 	if err != nil {
 		log.Println("OnClusterNodeEvent err:", err)
 	}
+}
+
+func (this *PyMgr) wait() {
+	this.tw.Notify()
+	<-this.waiting
+}
+
+func (this *PyMgr) done() {
+	this.waiting <- true
 }
 
 func (this *PyMgr) onRaftApply(rlog *raft.Log) {

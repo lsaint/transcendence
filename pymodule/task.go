@@ -7,45 +7,37 @@ package pymodule
 //#endif
 import "C"
 import (
-	"container/list"
 	"encoding/binary"
+
 	"os"
 	"runtime"
-	"sync"
 	"syscall"
-
-	"github.com/qiniu/py"
 )
 
-type Task struct {
-	Name *py.Base
-	Args []*py.Base
+type TaskWaitress struct {
+	fd      int64
+	buf     []byte
+	waiting chan bool
+	pyready chan bool
 }
 
-type TaskMgr struct {
-	sync.RWMutex
-	task_queue *list.List
-	fd         int64
-	buf        []byte
-}
-
-func NewTaskMgr() *TaskMgr {
-	task_queue := list.New()
+func NewTaskWaitress(waiting, pyready chan bool) *TaskWaitress {
 	buf := make([]byte, 8)
 	binary.PutUvarint(buf, 1)
 
-	mgr := &TaskMgr{task_queue: task_queue,
-		buf: buf,
-		fd:  int64(C.eventfd(0, 0))}
-
+	mgr := &TaskWaitress{
+		buf:     buf,
+		waiting: waiting,
+		pyready: pyready,
+		fd:      int64(C.eventfd(0, 0))}
 	return mgr
 }
 
-func (this *TaskMgr) GetFd() int64 {
+func (this *TaskWaitress) GetFd() int64 {
 	return this.fd
 }
 
-func (this *TaskMgr) Notify() {
+func (this *TaskWaitress) Notify() {
 	if runtime.GOOS == "linux" {
 		syscall.Write(int(this.fd), this.buf)
 	} else {
@@ -53,20 +45,11 @@ func (this *TaskMgr) Notify() {
 	}
 }
 
-func (this *TaskMgr) GetTask() []*Task {
-	this.Lock()
-	defer this.Unlock()
-	ret := make([]*Task, 0)
-	for e := this.task_queue.Front(); e != nil; e = e.Next() {
-		ret = append(ret, e.Value.(*Task))
-	}
-	this.task_queue.Init()
-	return ret
+func (this *TaskWaitress) PyReady() {
+	this.pyready <- true
 }
 
-func (this *TaskMgr) PushTask(task *Task) {
-	this.Lock()
-	defer this.Unlock()
-	this.task_queue.PushBack(task)
-	this.Notify()
+func (this *TaskWaitress) DoTask() {
+	this.waiting <- true
+	<-this.waiting
 }
