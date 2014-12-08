@@ -103,7 +103,6 @@ def packProto(uri, data):
 import thread, time
 def main(fd):
     print "#*-> main <-*#", fd
-    go.PyReady()
     try:
         thread.start_new_thread(pymain, ())
         loop(fd)

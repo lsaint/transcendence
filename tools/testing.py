@@ -68,6 +68,7 @@ import select, os, struct, sys
 def testEpoll(fd):
     epoll = select.epoll()
     epoll.register(fd, select.EPOLLIN)
+    go.PyReady()
     while True:
         events = epoll.poll(1)
         for fileno, event in events:
@@ -83,6 +84,7 @@ def testKqueue():
     kq = select.kqueue()
     kevent = select.kevent(signal.SIGUSR1, filter=select.KQ_FILTER_SIGNAL,
                             flags=select.KQ_EV_ADD | select.KQ_EV_ENABLE)
+    go.PyReady()
     while True:
         revents = kq.control([kevent], 1, None)  # block
         for event in revents:
