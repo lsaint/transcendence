@@ -2,7 +2,6 @@ package conf
 
 import (
 	"flag"
-	"fmt"
 	"log"
 
 	"github.com/qiniu/py"
@@ -31,8 +30,7 @@ type Config struct {
 	SAL_REMOTE_ADDR string
 
 	HTTP_LISTEN_PORT string
-	HTTP_LISTEN_URL1 string
-	HTTP_LISTEN_URL2 string
+	HTTP_LISTEN_URLS []string
 	HTTP_TIME_OUT    int
 
 	POST_TIME_OUT int
@@ -43,6 +41,11 @@ type Config struct {
 
 	RAFT_ADDR string
 	RAFT_DIR  string
+
+	HOST_SERVICE        string
+	URL_SERVICE_REG     string
+	SERVICE_LISTEN_PORT int
+	CTX_REG             string
 }
 
 func NewConfig() *Config {
@@ -52,15 +55,13 @@ func NewConfig() *Config {
 	cf := new(Config)
 	code, err := py.CompileFile(*conf_path, py.FileInput)
 	if err != nil {
-		fmt.Println(err)
-		log.Fatalln("Compile config failed")
+		log.Fatalln("Compile config failed", err)
 	}
 	defer code.Decref()
 
 	cf.mod, err = py.ExecCodeModule("conf", code.Obj())
 	if err != nil {
-		fmt.Println(err)
-		log.Fatalln("ExecCodeModule failed")
+		log.Fatalln("ExecCodeModule failed", err)
 	}
 	defer cf.mod.Decref()
 
@@ -78,8 +79,7 @@ func (this *Config) ReadConfig() {
 	this.SAL_LOCAL_ADDR = this.getStr("SAL_LOCAL_ADDR")
 	this.SAL_REMOTE_ADDR = this.getStr("SAL_REMOTE_ADDR")
 	this.HTTP_LISTEN_PORT = this.getStr("HTTP_LISTEN_PORT")
-	this.HTTP_LISTEN_URL1 = this.getStr("HTTP_LISTEN_URL1")
-	this.HTTP_LISTEN_URL2 = this.getStr("HTTP_LISTEN_URL2")
+	this.HTTP_LISTEN_URLS = this.getTupleStr("HTTP_LISTEN_URLS")
 	this.HTTP_TIME_OUT = this.getInt("HTTP_TIME_OUT")
 	this.POST_TIME_OUT = this.getInt("POST_TIME_OUT")
 	this.CLUSTER_NODE_NAME = this.getStr("CLUSTER_NODE_NAME")
@@ -93,8 +93,7 @@ func (this *Config) getStr(attr string) string {
 	s, err := this.mod.GetAttrString(attr)
 	defer s.Decref()
 	if err != nil {
-		fmt.Println(err)
-		log.Fatalln("Config getStr err")
+		log.Fatalln("Config getStr err", err)
 	}
 	ss, ok := py.ToString(s)
 	if !ok {
@@ -107,12 +106,39 @@ func (this *Config) getInt(attr string) int {
 	s, err := this.mod.GetAttrString(attr)
 	defer s.Decref()
 	if err != nil {
-		fmt.Println(err)
-		log.Fatalln("Config getInt err")
+		log.Fatalln("Config getInt err", err)
 	}
 	i, ok := py.ToInt(s)
 	if !ok {
 		log.Fatalln("Config ToInt err")
 	}
 	return i
+}
+
+func (this *Config) getTuple(attr string) *py.Tuple {
+	t, err := this.mod.GetAttrString(attr)
+	if err != nil {
+		log.Fatalln("Config getTuple err", err)
+	}
+	tp, ok := py.AsTuple(t)
+	if !ok {
+		log.Fatalln("Config AsTuple err")
+	}
+	return tp
+}
+
+func (this *Config) getTupleStr(attr string) []string {
+	tp := this.getTuple(attr)
+	defer tp.Decref()
+
+	slice := tp.Slice()
+	ret := make([]string, 0)
+	for _, obj := range slice {
+		s, ok := py.ToString(obj)
+		if !ok {
+			log.Fatalln("getTupleStr to str err")
+		}
+		ret = append(ret, s)
+	}
+	return ret
 }
