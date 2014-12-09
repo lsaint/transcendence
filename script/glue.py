@@ -47,7 +47,6 @@ def OnTicker():
     try:
         Timer.Update()
         LeaderTimer.Update()
-        print "py-timer update"
     except Exception as err:
         log.error("%s-%s" % ("OnTicker", traceback.format_exc()))
 
@@ -117,6 +116,6 @@ def loop(fd):
 
 def pymain():
     print "pymain start"
-    time.sleep(10)
     print "pymain end"
+
 

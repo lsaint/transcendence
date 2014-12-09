@@ -72,11 +72,9 @@ def testEpoll(fd):
     while True:
         events = epoll.poll(1)
         for fileno, event in events:
-            task = go.GetTask()
             ret = os.read(fd, 8)
-            print "read fd", struct.unpack("Q", ret)[0]
-            # do task
-            # clear task
+            #print "read fd", struct.unpack("Q", ret)[0]
+            go.DoTask()
 
 
 def testKqueue():

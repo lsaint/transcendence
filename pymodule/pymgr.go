@@ -152,21 +152,17 @@ func (this *PyMgr) onProto(pack *proto.Passpack) {
 	b := base64.StdEncoding.EncodeToString(pack.Bin)
 	data := py.NewString(string(b))
 	defer data.Decref()
-	this.wait()
-	_, err := this.glue.CallMethodObjArgs("OnGateProto", tsid.Obj(), ssid.Obj(),
+	_, err := this.callPyFunc("OnGateProto", tsid.Obj(), ssid.Obj(),
 		uri.Obj(), data.Obj(), action.Obj(), uids.Obj())
-	this.done()
 	if err != nil {
 		log.Println("OnGateProto err:", err)
 	}
 }
 
 func (this *PyMgr) onTicker() {
-	this.wait()
-	if _, err := this.glue.CallMethodObjArgs("OnTicker"); err != nil {
+	if _, err := this.callPyFunc("OnTicker"); err != nil {
 		log.Println("onTicker err:", err)
 	}
-	this.done()
 }
 
 func (this *PyMgr) onPostDone(sn int64, ret string) {
@@ -174,11 +170,9 @@ func (this *PyMgr) onPostDone(sn int64, ret string) {
 	defer py_sn.Decref()
 	py_ret := py.NewString(string(ret))
 	defer py_ret.Decref()
-	this.wait()
-	if _, err := this.glue.CallMethodObjArgs("OnPostDone", py_sn.Obj(), py_ret.Obj()); err != nil {
+	if _, err := this.callPyFunc("OnPostDone", py_sn.Obj(), py_ret.Obj()); err != nil {
 		log.Println("onPostDone err:", err)
 	}
-	this.done()
 }
 
 func (this *PyMgr) onHttpReq(jn, url string) string {
@@ -186,9 +180,7 @@ func (this *PyMgr) onHttpReq(jn, url string) string {
 	defer py_jn.Decref()
 	py_url := py.NewString(url)
 	defer py_url.Decref()
-	this.wait()
-	r, err := this.glue.CallMethodObjArgs("OnHttpReq", py_jn.Obj(), py_url.Obj())
-	this.done()
+	r, err := this.callPyFunc("OnHttpReq", py_jn.Obj(), py_url.Obj())
 
 	if err != nil {
 		log.Println("onHttpReq err:", err)
@@ -216,31 +208,27 @@ func (this *PyMgr) onClusterNodeEvent(ev network.NodeEvent) {
 	py_node_name := py.NewString(name)
 	defer py_node_name.Decref()
 
-	this.wait()
-	_, err := this.glue.CallMethodObjArgs("OnClusterNodeEvent", py_ev_type.Obj(), py_node_name.Obj())
+	_, err := this.callPyFunc("OnClusterNodeEvent", py_ev_type.Obj(), py_node_name.Obj())
 	if err != nil {
 		log.Println("OnClusterNodeEvent err:", err)
 	}
-	this.done()
 }
 
-func (this *PyMgr) wait() {
+func (this *PyMgr) callPyFunc(name string, args ...*py.Base) (*py.Base, error) {
 	this.tw.Notify()
 	<-this.waiting
-}
-
-func (this *PyMgr) done() {
-	this.waiting <- true
+	defer func() {
+		this.waiting <- true
+	}()
+	return this.glue.CallMethodObjArgs(name, args...)
 }
 
 func (this *PyMgr) onRaftApply(rlog *raft.Log) {
 	py_data := py.NewString(string(rlog.Data))
 	defer py_data.Decref()
 
-	this.wait()
-	_, err := this.glue.CallMethodObjArgs("OnRaftApply", py_data.Obj())
+	_, err := this.callPyFunc("OnRaftApply", py_data.Obj())
 	if err != nil {
 		log.Println("OnRaftApply err:", err)
 	}
-	this.done()
 }
