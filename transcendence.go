@@ -9,7 +9,7 @@ import (
 	"runtime"
 	"syscall"
 
-	"transcendence/conf"
+	. "transcendence/conf"
 	"transcendence/network"
 	"transcendence/proto"
 	"transcendence/pymodule"
@@ -32,13 +32,13 @@ func main() {
 	//    log.Println(http.ListenAndServe("localhost:6061", nil))
 	//}()
 
-	in := make(chan *proto.Passpack, conf.CF.BUF_QUEUE)
-	out := make(chan *proto.Passpack, conf.CF.BUF_QUEUE)
-	http_req_chan := make(chan *network.HttpReq, conf.CF.BUF_QUEUE)
+	in := make(chan *proto.Passpack, CF.BUF_QUEUE)
+	out := make(chan *proto.Passpack, CF.BUF_QUEUE)
+	http_req_chan := make(chan *network.HttpReq, CF.BUF_QUEUE)
 	pymgr := pymodule.NewPyMgr(in, out, http_req_chan)
-	httpsrv := network.NewHttpServer(http_req_chan)
+	httpsrv := network.NewHttpServer(http_req_chan, CF.HTTP_LISTEN_URLS)
 
-	go network.NewBackGate(in, out).Start()
+	//go network.NewBackGate(in, out).Start()
 	go pymgr.Start()
 	go httpsrv.Start()
 

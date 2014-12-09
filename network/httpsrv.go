@@ -7,7 +7,7 @@ import (
 	"net/http"
 	"time"
 
-	"transcendence/conf"
+	. "transcendence/conf"
 )
 
 type HttpReq struct {
@@ -18,23 +18,22 @@ type HttpReq struct {
 
 type HttpServer struct {
 	reqChan chan *HttpReq
+	urls    []string
 }
 
-func NewHttpServer(c chan *HttpReq) *HttpServer {
-	return &HttpServer{c}
+func NewHttpServer(c chan *HttpReq, urls []string) *HttpServer {
+	return &HttpServer{c, urls}
 }
 
 func (this *HttpServer) Start() {
-	http.HandleFunc(conf.CF.HTTP_LISTEN_URL1, func(w http.ResponseWriter, r *http.Request) {
-		this.onReq(w, r, conf.CF.HTTP_LISTEN_URL1)
-	})
-	http.HandleFunc(conf.CF.HTTP_LISTEN_URL2, func(w http.ResponseWriter, r *http.Request) {
-		this.onReq(w, r, conf.CF.HTTP_LISTEN_URL2)
-	})
+	for _, url := range this.urls {
+		http.HandleFunc(url, func(w http.ResponseWriter, r *http.Request) {
+			this.onReq(w, r, url)
+		})
+	}
 
-	log.Println("http server running, listen ",
-		conf.CF.HTTP_LISTEN_PORT, conf.CF.HTTP_LISTEN_URL1, conf.CF.HTTP_LISTEN_URL2)
-	log.Fatalln(http.ListenAndServe(conf.CF.HTTP_LISTEN_PORT, nil))
+	log.Println("http server running, listen ", CF.HTTP_LISTEN_PORT, this.urls)
+	log.Fatalln(http.ListenAndServe(CF.HTTP_LISTEN_PORT, nil))
 }
 
 func (this *HttpServer) onReq(w http.ResponseWriter, r *http.Request, url string) {
@@ -48,7 +47,7 @@ func (this *HttpServer) onReq(w http.ResponseWriter, r *http.Request, url string
 	case this.reqChan <- &HttpReq{string(recv_post), ret_chan, url}:
 		ret = <-ret_chan
 
-	case <-time.After(time.Duration(conf.CF.HTTP_TIME_OUT) * time.Second):
+	case <-time.After(time.Duration(CF.HTTP_TIME_OUT) * time.Second):
 	}
 
 	fmt.Fprint(w, ret)
