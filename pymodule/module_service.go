@@ -2,7 +2,11 @@ package pymodule
 
 import (
 	"encoding/json"
+	"fmt"
 	"log"
+	"net/url"
+	"strings"
+	"time"
 	"transcendence/network"
 
 	"github.com/qiniu/py"
@@ -23,9 +27,10 @@ type ServiceModule struct {
 func NewServiceModule(caller PyFuncCaller) *ServiceModule {
 	recvChan := make(chan *network.HttpReq, CF.BUF_QUEUE)
 	service := &ServiceModule{
-		pm:      network.NewPostman(),
-		caller:  caller,
-		httpSrv: network.NewHttpServer(recvChan, []string{"/uplinkmsg", "/leaveplatform"}),
+		pm:     network.NewPostman(),
+		caller: caller,
+		httpSrv: network.NewHttpServer(recvChan,
+			[]string{"/uplinkmsg", "/leaveplatform", "/checkalive"}),
 	}
 	service.init()
 	return service
@@ -54,6 +59,8 @@ func (this *ServiceModule) processServiceMsg() {
 			this.uplinkmsg(req.Req, req.Ret)
 		case "/leaveplatform":
 			this.leaveplatform(req.Req, req.Ret)
+		case "/checkalive":
+			this.checkalive(req)
 		}
 	}
 }
@@ -132,10 +139,10 @@ func (this *ServiceModule) uplinkmsg(req string, reply chan string) {
 }
 
 type S_leaveplatform struct {
-	Msgfrom string `json:"data"`
-	Action  string `json:"data"`
-	Suid    int64  `json:"data"`
-	Uid     int64  `json:"data"`
+	Msgfrom string `json:"msgfrom"`
+	Action  string `json:"action"`
+	Suid    int64  `json:"suid"`
+	Uid     int64  `json:"uid"`
 }
 
 func (this *ServiceModule) leaveplatform(req string, reply chan string) {
@@ -167,4 +174,112 @@ func (this *ServiceModule) leaveplatform(req string, reply chan string) {
 		log.Println("OnUplinkmsg err:", err)
 	}
 	reply <- ""
+}
+
+func (this *ServiceModule) checkalive(r *network.HttpReq) {
+	r.Ret <- fmt.Sprintf("response=checkalive&ts=%v", time.Now().Unix())
+}
+
+/*
+appid	必需，应用申请的appid(service type)
+regkey	必需，应用申请appid时对应的regkey
+uid		必需，单播的目标uid
+topsid	可选，不为0时，仅当目标uid在对应的频道时才将消息投递给用户
+Request body
+
+URL: http://abc/unicast?appid=120&regkey=1c4814e155bd8e0a26d69c45bd024531&uid=888999&topsid=400000
+POST内容：hello world
+*/
+func (this *ServiceModule) Py_Unicast(args *py.Tuple) (ret *py.Base, err error) {
+	var uid, topsid int64
+	var body string
+	err = py.Parse(args, &body, &topsid, &uid)
+	if err != nil {
+		log.Println("Parse unicast err:", err)
+		return
+	}
+
+	subfix := url.Values{}
+	subfix.Set("appid", fmt.Sprintf("%v", CF.SERVICE_APPID))
+	subfix.Add("reqkey", CF.SERVICE_REGKEY)
+	subfix.Add("uid", fmt.Sprintf("%v", uid))
+	subfix.Add("topsid", fmt.Sprintf("%v", topsid))
+
+	u := fmt.Sprintf("%v/%v", CF.URL_SERVICE_UNICAST, subfix.Encode())
+	go this.pm.Post(u, body)
+
+	return py.IncNone(), nil
+}
+
+/*
+appid	必需，应用申请的appid(service type)
+regkey	必需，应用申请appid时对应的regkey
+uids	多播的目标uid列表，以逗号分隔，如”80001,80002,80003”等等
+topsid	可选，不为0时，仅当目标uid在对应的频道时才将消息投递给用户
+Request body	POST方法时提交的消息内容，亦即客户端将收到的内容
+
+URL: http://abc/multicast
+		?appid=120&regkey=1c4814e155bd8e0a26d69c45bd024531&uids=80001,80002,80003&topsid=400000
+POST内容：hello world
+*/
+func (this *ServiceModule) Py_Multicast(args *py.Tuple) (ret *py.Base, err error) {
+	var uids []int
+	var topsid int
+	var body string
+	err = py.ParseV(args, &body, &topsid, &uids)
+	if err != nil {
+		log.Println("Parse unicast err:", err)
+		return
+	}
+
+	s_uids := make([]string, len(uids))
+	for i, uid := range uids {
+		s_uids[i] = fmt.Sprintf("%v", uid)
+	}
+
+	subfix := url.Values{}
+	subfix.Set("appid", fmt.Sprintf("%v", CF.SERVICE_APPID))
+	subfix.Add("reqkey", CF.SERVICE_REGKEY)
+	subfix.Add("topsid", fmt.Sprintf("%v", topsid))
+	subfix.Add("uids", strings.Join(s_uids, ","))
+
+	u := fmt.Sprintf("%v/%v", CF.URL_SERVICE_MULTICAST, subfix.Encode())
+	go this.pm.Post(u, body)
+
+	return py.IncNone(), nil
+}
+
+/*
+appid	必需，应用申请的appid(service type)
+regkey	必需，应用申请appid时对应的regkey
+topsid	可选，当topsid不为0而subsid为0时，topsid指定的频道内的所有人将收到消息（包括子频道）
+subsid	.......
+group_type	可选，与group_id共同组成应用自定义的广播类型（参考服务端SDK的说明）
+group_id	可选，与goup_type共同组成应用自定义的广播类型（参考服务端SDK的说明）
+op_uid	可选，当使用group_type和group_id时，op_uid指求发起广播请求的用户
+Request body	POST方法时提交的消息内容，亦即客户端将收到的内容
+
+URL: http://abc/broadcast?appid=120&regkey=1c4814e155bd8e0a26d69c45bd024531&topsid=400000
+POST内容：hello world
+*/
+func (this *ServiceModule) Py_Broadcast(args *py.Tuple) (ret *py.Base, err error) {
+	var topsid, subsid int
+	var body string
+
+	err = py.Parse(args, &body, &topsid, &subsid)
+	if err != nil {
+		log.Println("Parse unicast err:", err)
+		return
+	}
+
+	subfix := url.Values{}
+	subfix.Set("appid", fmt.Sprintf("%v", CF.SERVICE_APPID))
+	subfix.Add("reqkey", CF.SERVICE_REGKEY)
+	subfix.Add("topsid", fmt.Sprintf("%v", topsid))
+	subfix.Add("subsid", fmt.Sprintf("%v", subsid))
+
+	u := fmt.Sprintf("%v/%v", CF.URL_SERVICE_BROADCAST, subfix.Encode())
+	go this.pm.Post(u, body)
+
+	return py.IncNone(), nil
 }
