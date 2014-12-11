@@ -8,12 +8,12 @@ import (
 	"os"
 	"sync"
 	"time"
-	"transcendence/conf"
+	. "transcendence/conf"
 
+	"github.com/hashicorp/go-msgpack/codec"
 	"github.com/hashicorp/memberlist"
 	"github.com/hashicorp/raft"
 	"github.com/hashicorp/raft-mdb"
-	"github.com/hashicorp/go-msgpack/codec"
 )
 
 type NodeEventType int
@@ -48,13 +48,13 @@ func NewClusterNode() *ClusterNode {
 
 	// memberlist
 	config := memberlist.DefaultLocalConfig()
-	config.Name = conf.CF.CLUSTER_NODE_NAME
-	config.BindAddr = "127.0.0.1"
-	config.BindPort = conf.CF.CLUSTER_NODE_PORT
+	config.Name = CF.CLUSTER_NODE_NAME
+	config.BindAddr = CF.CLUSTER_NODE_ADDR
+	config.BindPort = CF.CLUSTER_NODE_PORT
 	config.Events = node
-	file, err := os.Create(fmt.Sprintf("%v/memlog", conf.CF.RAFT_DIR))
+	file, err := os.Create(fmt.Sprintf("%v/memberlist.log", CF.CLUSTER_LOG_PATH))
 	if err != nil {
-		log.Fatalln("Create memlog err:", err)
+		log.Fatalln("Create memberlist err:", err)
 	}
 	config.LogOutput = file
 	l, err := memberlist.Create(config) // memberlist.Create
@@ -63,8 +63,8 @@ func NewClusterNode() *ClusterNode {
 	}
 	log.Println("[CLUSTER]memberlist addr:", config.BindAddr, config.BindPort)
 
-	if conf.CF.CLUSTER_NODE_CONNECT2 != "" {
-		_, err = l.Join([]string{conf.CF.CLUSTER_NODE_CONNECT2})
+	if CF.CLUSTER_NODE_CONNECT2 != "" {
+		_, err = l.Join([]string{CF.CLUSTER_NODE_CONNECT2})
 		if err != nil {
 			log.Fatalln("Failed to join cluster: " + err.Error())
 		}
@@ -127,9 +127,9 @@ type ClusterRaftAgent struct {
 func NewClusterRaftAgent(applyCh chan *raft.Log) *ClusterRaftAgent {
 	var err error
 	node := &ClusterRaftAgent{ApplyCh: applyCh}
-	path := conf.CF.RAFT_DIR
+	path := CF.CLUSTER_LOG_PATH
 
-	dbSize := uint64(8 * 1024 * 1024)
+	dbSize := uint64(CF.RAFT_DB_SIZE)
 	store, err := raftmdb.NewMDBStoreWithSize(path, dbSize)
 	if err != nil {
 		log.Fatalln("store err", err)
@@ -139,13 +139,13 @@ func NewClusterRaftAgent(applyCh chan *raft.Log) *ClusterRaftAgent {
 	config.EnableSingleNode = true
 	config.SnapshotInterval = 30 * time.Second
 	config.SnapshotThreshold = 1
-	file, err := os.Create(fmt.Sprintf("%vlogoutput", path))
+	file, err := os.Create(fmt.Sprintf("%v/raft.log", path))
 	if err != nil {
 		log.Fatalln("create logoutput err:", err)
 	}
 	config.LogOutput = file
 
-	node.trans, err = raft.NewTCPTransport(conf.CF.RAFT_ADDR,
+	node.trans, err = raft.NewTCPTransport(CF.RAFT_ADDR,
 		nil, 2, time.Second, config.LogOutput)
 	if err != nil {
 		log.Fatalln("trans err", err)
@@ -206,7 +206,6 @@ func (m *FSM) Snapshot() (raft.FSMSnapshot, error) {
 }
 
 func (m *FSM) Restore(inp io.ReadCloser) error {
-	fmt.Println("###FSM.Restore###")
 	m.Lock()
 	defer m.Unlock()
 	defer inp.Close()

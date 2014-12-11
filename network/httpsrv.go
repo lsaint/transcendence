@@ -17,7 +17,7 @@ type HttpReq struct {
 }
 
 type HttpServer struct {
-	reqChan chan *HttpReq
+	ReqChan chan *HttpReq
 	urls    []string
 }
 
@@ -44,7 +44,7 @@ func (this *HttpServer) onReq(w http.ResponseWriter, r *http.Request, url string
 	}
 	ret, ret_chan := "", make(chan string)
 	select {
-	case this.reqChan <- &HttpReq{string(recv_post), ret_chan, url}:
+	case this.ReqChan <- &HttpReq{string(recv_post), ret_chan, url}:
 		ret = <-ret_chan
 
 	case <-time.After(time.Duration(CF.HTTP_TIME_OUT) * time.Second):

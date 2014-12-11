@@ -5,7 +5,6 @@ import (
 	"log"
 	"time"
 
-	//"transcendence/conf"
 	"transcendence/network"
 	"transcendence/proto"
 
@@ -22,7 +21,6 @@ const (
 
 type PyMgr struct {
 	recvChan chan *proto.Passpack
-	sendChan chan *proto.Passpack
 	httpChan chan *network.HttpReq
 
 	pm *network.Postman
@@ -31,12 +29,13 @@ type PyMgr struct {
 	tw   *TaskWaitress
 	glue *py.Module
 
-	gomo     *GoModule
-	gomod    py.GoModule
-	logmod   py.GoModule
-	redismod py.GoModule
-	salmod   py.GoModule
-	raftmod  py.GoModule
+	gomo       *GoModule
+	gomod      py.GoModule
+	logmod     py.GoModule
+	redismod   py.GoModule
+	salmod     py.GoModule
+	raftmod    py.GoModule
+	servicemod py.GoModule
 
 	waiting chan bool
 	pyready chan bool
@@ -49,7 +48,6 @@ func NewPyMgr(in chan *proto.Passpack,
 	waiting, pyready := make(chan bool), make(chan bool)
 	mgr := &PyMgr{recvChan: in,
 		httpChan: http_req_chan,
-		sendChan: out,
 		cn:       network.NewClusterNode(),
 		tw:       NewTaskWaitress(waiting, pyready),
 		waiting:  waiting,
@@ -94,6 +92,14 @@ func NewPyMgr(in chan *proto.Passpack,
 	}
 
 	_, err = mgr.glue.CallMethodObjArgs("test_script")
+	if err != nil {
+		log.Fatalln("ExecCodeModule failed:", err)
+	}
+
+	//mgr.servicemod, err = py.NewGoModule("service", "", NewServiceModule(mgr))
+	//if err != nil {
+	//	log.Fatalln("NewServiceModule failed:", err)
+	//}
 
 	go func() {
 		fd := py.NewInt64(mgr.tw.GetFd())
@@ -101,10 +107,6 @@ func NewPyMgr(in chan *proto.Passpack,
 		mgr.glue.CallMethodObjArgs("main", fd.Obj())
 	}()
 
-	// defer mgr.pymode.Decref()
-	if err != nil {
-		log.Fatalln("ExecCodeModule failed:", err)
-	}
 	return mgr
 }
 
