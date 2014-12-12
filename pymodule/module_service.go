@@ -19,17 +19,19 @@ type PyFuncCaller interface {
 }
 
 type ServiceModule struct {
-	pm      *network.Postman
-	httpSrv *network.HttpServer
-	caller  PyFuncCaller
+	pm       *network.Postman
+	httpChan chan *network.HttpReq
+	httpSrv  *network.HttpServer
+	caller   PyFuncCaller
 }
 
 func NewServiceModule(caller PyFuncCaller) *ServiceModule {
-	recvChan := make(chan *network.HttpReq, CF.BUF_QUEUE)
+	httpChan := make(chan *network.HttpReq, CF.BUF_QUEUE)
 	service := &ServiceModule{
-		pm:     network.NewPostman(),
-		caller: caller,
-		httpSrv: network.NewHttpServer(recvChan,
+		pm:       network.NewPostman(),
+		httpChan: httpChan,
+		caller:   caller,
+		httpSrv: network.NewHttpServer(httpChan, fmt.Sprintf(":%v", CF.SERVICE_LISTEN_PORT),
 			[]string{"/uplinkmsg", "/leaveplatform", "/checkalive"}),
 	}
 	service.init()
@@ -53,7 +55,7 @@ func (this *ServiceModule) register() {
 }
 
 func (this *ServiceModule) processServiceMsg() {
-	for req := range this.httpSrv.ReqChan {
+	for req := range this.httpChan {
 		switch req.Url {
 		case "/uplinkmsg":
 			this.uplinkmsg(req.Req, req.Ret)

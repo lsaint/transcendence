@@ -28,7 +28,7 @@ type Config struct {
 	SAL_LOCAL_ADDR  string
 	SAL_REMOTE_ADDR string
 
-	HTTP_LISTEN_PORT string
+	HTTP_LISTEN_ADDR string
 	HTTP_LISTEN_URLS []string
 	HTTP_TIME_OUT    int
 
@@ -66,7 +66,7 @@ func NewConfig() *Config {
 
 	cf.mod, err = py.ExecCodeModule("conf", code.Obj())
 	if err != nil {
-		log.Fatalln("ExecCodeModule failed", err)
+		log.Fatalln("Exec conf.py failed", err)
 	}
 	defer cf.mod.Decref()
 
@@ -82,7 +82,7 @@ func (this *Config) ReadConfig() {
 	this.BUF_QUEUE = this.getInt("BUF_QUEUE")
 	this.MAX_LEN_HEAD = this.getInt("MAX_LEN_HEAD")
 
-	this.HTTP_LISTEN_PORT = this.getStr("HTTP_LISTEN_PORT")
+	this.HTTP_LISTEN_ADDR = this.getStr("HTTP_LISTEN_ADDR")
 	this.HTTP_LISTEN_URLS = this.getTupleStr("HTTP_LISTEN_URLS")
 	this.HTTP_TIME_OUT = this.getInt("HTTP_TIME_OUT")
 	this.POST_TIME_OUT = this.getInt("POST_TIME_OUT")

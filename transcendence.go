@@ -36,9 +36,8 @@ func main() {
 	out := make(chan *proto.Passpack, CF.BUF_QUEUE)
 	http_req_chan := make(chan *network.HttpReq, CF.BUF_QUEUE)
 	pymgr := pymodule.NewPyMgr(in, out, http_req_chan)
-	httpsrv := network.NewHttpServer(http_req_chan, CF.HTTP_LISTEN_URLS)
+	httpsrv := network.NewHttpServer(http_req_chan, CF.HTTP_LISTEN_ADDR, CF.HTTP_LISTEN_URLS)
 
-	//go network.NewBackGate(in, out).Start()
 	go pymgr.Start()
 	go httpsrv.Start()
 

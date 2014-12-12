@@ -17,12 +17,13 @@ type HttpReq struct {
 }
 
 type HttpServer struct {
-	ReqChan chan *HttpReq
+	reqChan chan *HttpReq
+	addr    string
 	urls    []string
 }
 
-func NewHttpServer(c chan *HttpReq, urls []string) *HttpServer {
-	return &HttpServer{c, urls}
+func NewHttpServer(c chan *HttpReq, addr string, urls []string) *HttpServer {
+	return &HttpServer{c, addr, urls}
 }
 
 func (this *HttpServer) Start() {
@@ -32,8 +33,8 @@ func (this *HttpServer) Start() {
 		})
 	}
 
-	log.Println("http server running, listen ", CF.HTTP_LISTEN_PORT, this.urls)
-	log.Fatalln(http.ListenAndServe(CF.HTTP_LISTEN_PORT, nil))
+	log.Println("http server running, listen ", this.addr, this.urls)
+	log.Fatalln(http.ListenAndServe(this.addr, nil))
 }
 
 func (this *HttpServer) onReq(w http.ResponseWriter, r *http.Request, url string) {
@@ -44,7 +45,7 @@ func (this *HttpServer) onReq(w http.ResponseWriter, r *http.Request, url string
 	}
 	ret, ret_chan := "", make(chan string)
 	select {
-	case this.ReqChan <- &HttpReq{string(recv_post), ret_chan, url}:
+	case this.reqChan <- &HttpReq{string(recv_post), ret_chan, url}:
 		ret = <-ret_chan
 
 	case <-time.After(time.Duration(CF.HTTP_TIME_OUT) * time.Second):
