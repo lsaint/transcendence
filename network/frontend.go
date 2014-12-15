@@ -4,7 +4,7 @@ import (
 	"encoding/binary"
 	"log"
 	"net"
-	"transcendence/conf"
+	. "transcendence/conf"
 	"transcendence/proto"
 
 	pb "code.google.com/p/goprotobuf/proto"
@@ -26,19 +26,19 @@ type FrontGate struct {
 }
 
 func NewFrontGate(entry chan *proto.Passpack, exit chan *proto.Passpack) *FrontGate {
-	conn, err := net.Dial("tcp", conf.CF.DIAL_HIVE_ADDR)
+	conn, err := net.Dial("tcp", S("DIAL_HIVE_ADDR"))
 	if err != nil {
 		log.Fatalln("dial to master err", err)
 	}
-	fe := &FrontGate{fid: uint32(conf.CF.FID), cc: NewIConnection(conn),
-		buffChan:    make(chan *ConnBuff, conf.CF.BUF_QUEUE),
+	fe := &FrontGate{fid: uint32(I("FID")), cc: NewIConnection(conn),
+		buffChan:    make(chan *ConnBuff, I("BUF_QUEUE")),
 		GateInChan:  entry,
 		GateOutChan: exit}
 	return fe
 }
 
 func (this *FrontGate) Start() {
-	log.Println("FrontGate", this.fid, "running, dial to", conf.CF.DIAL_HIVE_ADDR)
+	log.Println("FrontGate", this.fid, "running, dial to", S("DIAL_HIVE_ADDR"))
 	this.register()
 	go this.recvFromSock()
 	go this.comein()

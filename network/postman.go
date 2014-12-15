@@ -7,7 +7,7 @@ import (
 	"strings"
 	"time"
 
-	"transcendence/conf"
+	. "transcendence/conf"
 )
 
 type RequestCtx struct {
@@ -23,8 +23,8 @@ type Postman struct {
 }
 
 func NewPostman() *Postman {
-	client := &http.Client{Timeout: time.Duration(conf.CF.POST_TIME_OUT) * time.Second}
-	pm := &Postman{make(chan *RequestCtx, conf.CF.BUF_QUEUE), client}
+	client := &http.Client{Timeout: time.Duration(I("POST_TIME_OUT")) * time.Second}
+	pm := &Postman{make(chan *RequestCtx, I("BUF_QUEUE")), client}
 	return pm
 }
 

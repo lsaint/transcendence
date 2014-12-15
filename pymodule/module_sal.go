@@ -9,7 +9,7 @@ import (
 	"git.apache.org/thrift.git/lib/go/thrift"
 	"github.com/qiniu/py"
 
-	"transcendence/conf"
+	. "transcendence/conf"
 	"transcendence/network"
 )
 
@@ -46,13 +46,13 @@ func NewSalModule(svctype int) *SalModule {
 
 func (this *SalModule) init() {
 	this.protocolFactory = thrift.NewTBinaryProtocolFactoryDefault()
-	this.transportFactory = thrift.NewTBufferedTransportFactory(conf.CF.BUF_QUEUE)
+	this.transportFactory = thrift.NewTBufferedTransportFactory(I("BUF_QUEUE"))
 	this.transportFactory = thrift.NewTFramedTransportFactory(this.transportFactory)
 }
 
 func (this *SalModule) runSalClient() {
 	var transport thrift.TTransport
-	transport, err := thrift.NewTSocket(conf.CF.SAL_REMOTE_ADDR)
+	transport, err := thrift.NewTSocket(S("SAL_REMOTE_ADDR"))
 	if err != nil {
 		log.Fatalln("connect to sal err", err)
 	}
@@ -71,7 +71,7 @@ func (this *SalModule) runSalClient() {
 }
 
 func (this *SalModule) runSalServer() {
-	transport, err := thrift.NewTServerSocket(conf.CF.SAL_LOCAL_ADDR)
+	transport, err := thrift.NewTServerSocket(S("SAL_LOCAL_ADDR"))
 	if err != nil {
 		log.Fatalln("NewTServerSocket err", err)
 	}

@@ -32,11 +32,11 @@ func main() {
 	//    log.Println(http.ListenAndServe("localhost:6061", nil))
 	//}()
 
-	in := make(chan *proto.Passpack, CF.BUF_QUEUE)
-	out := make(chan *proto.Passpack, CF.BUF_QUEUE)
-	http_req_chan := make(chan *network.HttpReq, CF.BUF_QUEUE)
+	in := make(chan *proto.Passpack, I("BUF_QUEUE"))
+	out := make(chan *proto.Passpack, I("BUF_QUEUE"))
+	http_req_chan := make(chan *network.HttpReq, I("BUF_QUEUE"))
 	pymgr := pymodule.NewPyMgr(in, out, http_req_chan)
-	httpsrv := network.NewHttpServer(http_req_chan, CF.HTTP_LISTEN_ADDR, CF.HTTP_LISTEN_URLS)
+	httpsrv := network.NewHttpServer(http_req_chan, S("HTTP_LISTEN_ADDR"), TS("HTTP_LISTEN_URLS"))
 
 	go pymgr.Start()
 	go httpsrv.Start()

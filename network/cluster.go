@@ -48,11 +48,11 @@ func NewClusterNode() *ClusterNode {
 
 	// memberlist
 	config := memberlist.DefaultLocalConfig()
-	config.Name = CF.CLUSTER_NODE_NAME
-	config.BindAddr = CF.CLUSTER_NODE_ADDR
-	config.BindPort = CF.CLUSTER_NODE_PORT
+	config.Name = S("CLUSTER_NODE_NAME")
+	config.BindAddr = S("CLUSTER_NODE_ADDR")
+	config.BindPort = I("CLUSTER_NODE_PORT")
 	config.Events = node
-	file, err := os.Create(fmt.Sprintf("%v/memberlist.log", CF.CLUSTER_LOG_PATH))
+	file, err := os.Create(fmt.Sprintf("%v/memberlist.log", S("CLUSTER_LOG_PATH")))
 	if err != nil {
 		log.Fatalln("Create memberlist err:", err)
 	}
@@ -63,8 +63,8 @@ func NewClusterNode() *ClusterNode {
 	}
 	log.Println("[CLUSTER]memberlist addr:", config.BindAddr, config.BindPort)
 
-	if CF.CLUSTER_NODE_CONNECT2 != "" {
-		_, err = l.Join([]string{CF.CLUSTER_NODE_CONNECT2})
+	if S("CLUSTER_NODE_CONNECT2") != "" {
+		_, err = l.Join([]string{S("CLUSTER_NODE_CONNECT2")})
 		if err != nil {
 			log.Fatalln("Failed to join cluster: " + err.Error())
 		}
@@ -127,9 +127,9 @@ type ClusterRaftAgent struct {
 func NewClusterRaftAgent(applyCh chan *raft.Log) *ClusterRaftAgent {
 	var err error
 	node := &ClusterRaftAgent{ApplyCh: applyCh}
-	path := CF.CLUSTER_LOG_PATH
+	path := S("CLUSTER_LOG_PATH")
 
-	dbSize := uint64(CF.RAFT_DB_SIZE)
+	dbSize := uint64(I("RAFT_DB_SIZE"))
 	store, err := raftmdb.NewMDBStoreWithSize(path, dbSize)
 	if err != nil {
 		log.Fatalln("store err", err)
@@ -145,7 +145,7 @@ func NewClusterRaftAgent(applyCh chan *raft.Log) *ClusterRaftAgent {
 	}
 	config.LogOutput = file
 
-	node.trans, err = raft.NewTCPTransport(CF.RAFT_ADDR,
+	node.trans, err = raft.NewTCPTransport(S("RAFT_ADDR"),
 		nil, 2, time.Second, config.LogOutput)
 	if err != nil {
 		log.Fatalln("trans err", err)

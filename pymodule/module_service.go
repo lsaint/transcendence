@@ -26,12 +26,12 @@ type ServiceModule struct {
 }
 
 func NewServiceModule(caller PyFuncCaller) *ServiceModule {
-	httpChan := make(chan *network.HttpReq, CF.BUF_QUEUE)
+	httpChan := make(chan *network.HttpReq, I("BUF_QUEUE"))
 	service := &ServiceModule{
 		pm:       network.NewPostman(),
 		httpChan: httpChan,
 		caller:   caller,
-		httpSrv: network.NewHttpServer(httpChan, fmt.Sprintf(":%v", CF.SERVICE_LISTEN_PORT),
+		httpSrv: network.NewHttpServer(httpChan, fmt.Sprintf(":%v", I("SERVICE_LISTEN_PORT")),
 			[]string{"/uplinkmsg", "/leaveplatform", "/checkalive"}),
 	}
 	service.init()
@@ -47,7 +47,7 @@ CTX_REG = {"appid":"120","appname":"testreghttp","port":"20000","groupid":"4500"
 	"isp2ip":[{"ip":"121.14.170.11","isp":"2"}], "regkey":"1c4814e155bd8e0acdcc3d5748e952de"}
 */
 func (this *ServiceModule) register() {
-	ret := this.pm.Post(CF.URL_SERVICE_REG, CF.CTX_REG)
+	ret := this.pm.Post(S("URL_SERVICE_REG"), S("CTX_REG"))
 	if ret == "" {
 		log.Fatalln("register to service timeout")
 	}
@@ -202,12 +202,12 @@ func (this *ServiceModule) Py_Unicast(args *py.Tuple) (ret *py.Base, err error) 
 	}
 
 	subfix := url.Values{}
-	subfix.Set("appid", fmt.Sprintf("%v", CF.SERVICE_APPID))
-	subfix.Add("reqkey", CF.SERVICE_REGKEY)
+	subfix.Set("appid", fmt.Sprintf("%v", I("SERVICE_APPID")))
+	subfix.Add("reqkey", S("SERVICE_REGKEY"))
 	subfix.Add("uid", fmt.Sprintf("%v", uid))
 	subfix.Add("topsid", fmt.Sprintf("%v", topsid))
 
-	u := fmt.Sprintf("%v/%v", CF.URL_SERVICE_UNICAST, subfix.Encode())
+	u := fmt.Sprintf("%v/%v", S("URL_SERVICE_UNICAST"), subfix.Encode())
 	go this.pm.Post(u, body)
 
 	return py.IncNone(), nil
@@ -240,12 +240,12 @@ func (this *ServiceModule) Py_Multicast(args *py.Tuple) (ret *py.Base, err error
 	}
 
 	subfix := url.Values{}
-	subfix.Set("appid", fmt.Sprintf("%v", CF.SERVICE_APPID))
-	subfix.Add("reqkey", CF.SERVICE_REGKEY)
+	subfix.Set("appid", fmt.Sprintf("%v", I("SERVICE_APPID")))
+	subfix.Add("reqkey", S("SERVICE_REGKEY"))
 	subfix.Add("topsid", fmt.Sprintf("%v", topsid))
 	subfix.Add("uids", strings.Join(s_uids, ","))
 
-	u := fmt.Sprintf("%v/%v", CF.URL_SERVICE_MULTICAST, subfix.Encode())
+	u := fmt.Sprintf("%v/%v", S("URL_SERVICE_MULTICAST"), subfix.Encode())
 	go this.pm.Post(u, body)
 
 	return py.IncNone(), nil
@@ -275,12 +275,12 @@ func (this *ServiceModule) Py_Broadcast(args *py.Tuple) (ret *py.Base, err error
 	}
 
 	subfix := url.Values{}
-	subfix.Set("appid", fmt.Sprintf("%v", CF.SERVICE_APPID))
-	subfix.Add("reqkey", CF.SERVICE_REGKEY)
+	subfix.Set("appid", fmt.Sprintf("%v", I("SERVICE_APPID")))
+	subfix.Add("reqkey", S("SERVICE_REGKEY"))
 	subfix.Add("topsid", fmt.Sprintf("%v", topsid))
 	subfix.Add("subsid", fmt.Sprintf("%v", subsid))
 
-	u := fmt.Sprintf("%v/%v", CF.URL_SERVICE_BROADCAST, subfix.Encode())
+	u := fmt.Sprintf("%v/%v", S("URL_SERVICE_BROADCAST"), subfix.Encode())
 	go this.pm.Post(u, body)
 
 	return py.IncNone(), nil

@@ -48,7 +48,7 @@ func (this *HttpServer) onReq(w http.ResponseWriter, r *http.Request, url string
 	case this.reqChan <- &HttpReq{string(recv_post), ret_chan, url}:
 		ret = <-ret_chan
 
-	case <-time.After(time.Duration(CF.HTTP_TIME_OUT) * time.Second):
+	case <-time.After(time.Duration(I("HTTP_TIME_OUT")) * time.Second):
 	}
 
 	fmt.Fprint(w, ret)

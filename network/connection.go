@@ -5,7 +5,7 @@ import (
 	"io"
 	"log"
 
-	"transcendence/conf"
+	. "transcendence/conf"
 )
 
 const (
@@ -22,7 +22,7 @@ type IConnection struct {
 func NewIConnection(c io.ReadWriteCloser) *IConnection {
 	cliConn := new(IConnection)
 	cliConn.conn = c
-	cliConn.sendchan = make(chan []byte, conf.CF.BUF_QUEUE)
+	cliConn.sendchan = make(chan []byte, I("BUF_QUEUE"))
 	go cliConn.sending()
 	return cliConn
 }
@@ -63,7 +63,7 @@ func (this *IConnection) ReadBody() (ret []byte, ok bool) {
 		return
 	}
 	len_head := binary.LittleEndian.Uint32(buff_head) - LEN_EXTRA
-	if len_head > uint32(conf.CF.MAX_LEN_HEAD) {
+	if len_head > uint32(I("MAX_LEN_HEAD")) {
 		log.Println("[Error]message len too long", len_head, string(buff_head))
 		return
 	}

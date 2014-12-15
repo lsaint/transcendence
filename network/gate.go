@@ -8,7 +8,7 @@ import (
 
 	pb "code.google.com/p/goprotobuf/proto"
 
-	"transcendence/conf"
+	. "transcendence/conf"
 	"transcendence/proto"
 )
 
@@ -31,7 +31,7 @@ type BackGate struct {
 }
 
 func NewBackGate(entry chan *proto.Passpack, exit chan *proto.Passpack) *BackGate {
-	gs := &BackGate{buffChan: make(chan *ConnBuff, conf.CF.BUF_QUEUE),
+	gs := &BackGate{buffChan: make(chan *ConnBuff, I("BUF_QUEUE")),
 		fid2frontend: make(map[uint32]*IConnection),
 		uid2fid:      make(map[uint32]uint32),
 		fids:         make([]uint32, 0),
@@ -42,11 +42,11 @@ func NewBackGate(entry chan *proto.Passpack, exit chan *proto.Passpack) *BackGat
 }
 
 func (this *BackGate) Start() {
-	ln, err := net.Listen("tcp", conf.CF.HIVE_LISTEN_ADDR)
+	ln, err := net.Listen("tcp", S("HIVE_LISTEN_ADDR"))
 	if err != nil {
 		log.Fatalln(err)
 	}
-	log.Println("[Info]BackGate running", conf.CF.HIVE_LISTEN_ADDR)
+	log.Println("[Info]BackGate running", S("HIVE_LISTEN_ADDR"))
 	for {
 		conn, err := ln.Accept()
 		if err != nil {
