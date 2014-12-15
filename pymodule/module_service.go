@@ -182,6 +182,19 @@ func (this *ServiceModule) checkalive(r *network.HttpReq) {
 	r.Ret <- fmt.Sprintf("response=checkalive&ts=%v", time.Now().Unix())
 }
 
+type castResp struct {
+	Response string `json:"response"`
+	Message  string `json:"message"`
+}
+
+func (this *ServiceModule) doCast(url, body string) {
+	resp := &castResp{}
+	err := json.Unmarshal([]byte(this.pm.Post(url, body)), resp)
+	if err != nil || resp.Message != "OK" {
+		log.Println("cast err", err, resp)
+	}
+}
+
 /*
 appid	必需，应用申请的appid(service type)
 regkey	必需，应用申请appid时对应的regkey
@@ -208,7 +221,7 @@ func (this *ServiceModule) Py_Unicast(args *py.Tuple) (ret *py.Base, err error) 
 	subfix.Add("topsid", fmt.Sprintf("%v", topsid))
 
 	u := fmt.Sprintf("%v/%v", S("URL_SERVICE_UNICAST"), subfix.Encode())
-	go this.pm.Post(u, body)
+	go this.doCast(u, body)
 
 	return py.IncNone(), nil
 }
@@ -246,7 +259,7 @@ func (this *ServiceModule) Py_Multicast(args *py.Tuple) (ret *py.Base, err error
 	subfix.Add("uids", strings.Join(s_uids, ","))
 
 	u := fmt.Sprintf("%v/%v", S("URL_SERVICE_MULTICAST"), subfix.Encode())
-	go this.pm.Post(u, body)
+	go this.doCast(u, body)
 
 	return py.IncNone(), nil
 }
@@ -281,7 +294,7 @@ func (this *ServiceModule) Py_Broadcast(args *py.Tuple) (ret *py.Base, err error
 	subfix.Add("subsid", fmt.Sprintf("%v", subsid))
 
 	u := fmt.Sprintf("%v/%v", S("URL_SERVICE_BROADCAST"), subfix.Encode())
-	go this.pm.Post(u, body)
+	go this.doCast(u, body)
 
 	return py.IncNone(), nil
 }
