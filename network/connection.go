@@ -79,8 +79,3 @@ func (this *IConnection) Close() {
 	this.conn.Close()
 	//close(this.sendchan)
 }
-
-type ConnBuff struct {
-	conn *IConnection
-	buff []byte
-}

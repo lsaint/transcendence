@@ -3,7 +3,6 @@ package network
 import (
 	"encoding/binary"
 	"log"
-	"math/rand"
 	"net"
 
 	pb "code.google.com/p/goprotobuf/proto"
@@ -12,239 +11,174 @@ import (
 	"transcendence/proto"
 )
 
-const (
-	URI_REGISTER   = 1
-	URI_UNREGISTER = 3
-	URI_PING       = 4
+const ()
 
-	URI_DELIMITER = 100
-)
-
-// for accept
-type BackGate struct {
-	buffChan     chan *ConnBuff
-	fid2frontend map[uint32]*IConnection
-	uid2fid      map[uint32]uint32
-	fids         []uint32
-	GateInChan   chan *proto.Passpack
-	GateOutChan  chan *proto.Passpack
+type GateServer struct {
+	lidCounter int64
+	buffChan   chan *ConnBuff
+	lid2conn   map[int64]*IConnection
+	lid2sid    map[int64]uint32
+	sid2conns  map[uint32][]*IConnection
+	GateEntry  chan *proto.GateInPack
+	GateExit   chan *proto.GateOutPack
 }
 
-func NewBackGate(entry chan *proto.Passpack, exit chan *proto.Passpack) *BackGate {
-	gs := &BackGate{buffChan: make(chan *ConnBuff, I("BUF_QUEUE")),
-		fid2frontend: make(map[uint32]*IConnection),
-		uid2fid:      make(map[uint32]uint32),
-		fids:         make([]uint32, 0),
-		GateInChan:   entry,
-		GateOutChan:  exit}
+func NewGateServer(entry chan *proto.GateInPack, exit chan *proto.GateOutPack) *GateServer {
+	gs := &GateServer{buffChan: make(chan *ConnBuff, I("BUF_QUEUE")),
+		lidCounter: 0,
+		lid2conn:   make(map[int64]*IConnection),
+		lid2sid:    make(map[int64]uint32),
+		sid2conns:  make(map[uint32][]*IConnection),
+		GateEntry:  entry,
+		GateExit:   exit}
 	go gs.parse()
 	return gs
 }
 
-func (this *BackGate) Start() {
+func (this *GateServer) Start() {
 	ln, err := net.Listen("tcp", S("HIVE_LISTEN_ADDR"))
 	if err != nil {
-		log.Fatalln(err)
+		log.Fatalln("Listen err", err)
 	}
 	log.Println("[Info]BackGate running", S("HIVE_LISTEN_ADDR"))
 	for {
 		conn, err := ln.Accept()
 		if err != nil {
-			log.Println("[Error]Accept", err)
+			log.Println("[Error]Accept error", err)
 			continue
 		}
-		log.Println("[Info]frontend connected")
-		go this.acceptConn(conn)
+		this.lidCounter += 1
+		go this.acceptConn(conn, this.lidCounter)
 	}
 }
 
-func (this *BackGate) acceptConn(conn net.Conn) {
+func (this *GateServer) acceptConn(conn net.Conn, lid int64) {
 	cliConn := NewIConnection(conn)
 	for {
 		if buff_body, ok := cliConn.ReadBody(); ok {
-			this.buffChan <- &ConnBuff{cliConn, buff_body}
+			this.buffChan <- &ConnBuff{cliConn, buff_body, lid}
 			continue
 		}
-		this.buffChan <- &ConnBuff{cliConn, nil}
+		this.buffChan <- &ConnBuff{cliConn, nil, lid}
 		break
 	}
-	log.Println("[Info]frontend disconnect")
 	cliConn.Close()
 }
 
-func (this *BackGate) parse() {
-	go func() {
-		for pack := range this.GateOutChan {
-			this.comeout(pack)
-		}
-	}()
+func (this *GateServer) parse() {
+	go this.comeout()
 
 	for conn_buff := range this.buffChan {
 		msg := conn_buff.buff
 		conn := conn_buff.conn
+		lid := conn_buff.lid
+
 		if msg == nil {
-			this.unregister(conn)
+			this.unregister(conn, lid, false)
 			continue
 		}
-		len_msg := len(msg)
-		if len_msg < LEN_URI {
+		if len(msg) < LEN_URI {
 			continue
 		}
 
-		f_uri := binary.LittleEndian.Uint32(msg[:LEN_URI])
-		switch f_uri {
-		case URI_REGISTER:
-			this.register(msg[LEN_URI:], conn)
-		case URI_UNREGISTER:
-			this.unregister(conn)
-		case URI_PING:
-
-		default:
-			if f_uri > URI_DELIMITER {
-				this.comein(msg[LEN_URI:])
-			} else {
-				log.Println("[Error]invalid f_uri:", f_uri)
-			}
-		}
-	}
-}
-
-func (this *BackGate) unpack(b []byte) (msg *proto.Passpack, err error) {
-	msg = &proto.Passpack{}
-	if err = pb.Unmarshal(b, msg); err == nil {
-		// register uid2fid
-		if msg.GetAction() == proto.Action_D2H_Msg {
-			this.uid2fid[msg.GetUids()[0]] = msg.GetFid()
-		}
-	} else {
-		log.Println("[Error]pb Unmarshal Passpack", err)
-	}
-	return
-}
-
-func (this *BackGate) comein(b []byte) {
-	if msg, err := this.unpack(b); err == nil {
-		this.GateInChan <- msg
-	}
-}
-
-func (this *BackGate) randomFid() uint32 {
-	return this.fids[rand.Intn(len(this.fids))]
-}
-
-func (this *BackGate) broadcastFid() uint32 {
-	return this.fids[0]
-}
-
-func (this *BackGate) comeout(pack *proto.Passpack) {
-	//log.Println("coming out", pack, "fid2frontend", this.fid2frontend)
-	l := len(this.fids)
-	if l == 0 {
-		return
-	}
-
-	switch pack.GetAction() {
-	case proto.Action_H2D_Broadcast:
-		p := this.doPack(pack, this.broadcastFid())
-		for _, conn := range this.fid2frontend {
-			conn.Send(p)
-		}
-	case proto.Action_H2D_Multicast:
-		rfid := this.randomFid()
-		p := this.doPack(pack, rfid)
-		if cc := this.fid2frontend[rfid]; cc != nil {
-			cc.Send(p)
+		uri := binary.LittleEndian.Uint16(msg[:LEN_URI])
+		sid := uint32(0)
+		if uri == 1 {
+			sid = this.get_sid_when_uri1()
+		} else if _, exist := this.lid2sid[lid]; exist {
+			sid = this.lid2sid[lid]
 		} else {
-			log.Println("[Error]random not find fid2frontend", rfid)
+			log.Println("[Error]sid not exist")
+			continue
 		}
-	case proto.Action_H2D_Unicast:
-		fid := pack.GetFid()
-		if fid == 0 {
-			fid = this.uid2fid[pack.GetUids()[0]]
+		if _, exist := this.lid2conn[lid]; !exist {
+			this.register(conn, lid, sid)
 		}
-		if fid != 0 {
-			if cc := this.fid2frontend[fid]; cc != nil {
-				cc.Send(this.doPack(pack, fid))
-			} else {
-				n_fid := this.randomFid()
-				log.Println("[Info]not find fid2frontend", fid, "redirect to", n_fid)
-				cc.Send(this.doPack(pack, n_fid))
-			}
-		} else {
-			log.Println("[Error]not find uid2fid", pack.GetUids())
-		}
+		this.comein(msg[LEN_URI:])
+
 	}
 }
 
-func (this *BackGate) unicast(pack *proto.Passpack) {
-	fid := pack.GetFid()
-	if fid == 0 {
-		fid = this.uid2fid[pack.GetUids()[0]]
-	}
-	if fid != 0 {
-		if cc := this.fid2frontend[fid]; cc != nil {
-			cc.Send(this.doPack(pack, fid))
-		} else {
-			n_fid := this.randomFid()
-			log.Println("[Info]not find fid2frontend", fid, "redirect to", n_fid)
-			cc.Send(this.doPack(pack, n_fid))
-		}
-	} else {
-		log.Println("[Error]not find uid2fid", pack.GetUids())
-	}
-}
-
-func (this *BackGate) doPack(pack *proto.Passpack, fid uint32) (ret []byte) {
-	if data, err := pb.Marshal(pack); err == nil {
-		uri_field := make([]byte, LEN_URI)
-		binary.LittleEndian.PutUint32(uri_field, pack.GetUri())
-		ret = append(uri_field, data...)
-	} else {
-		log.Println("[Error]pack Passpack", err)
-	}
-	return
-}
-
-func (this *BackGate) register(b []byte, cc *IConnection) {
-	pack := &proto.Passpack{}
-	if err := pb.Unmarshal(b, pack); err == nil {
-		fid := uint32(pack.GetFid())
-		if fid == 0 {
-			log.Println("[Error]fid 0 err")
-			return
-		}
-		cc_ex, exist := this.fid2frontend[fid]
-		if exist {
-			this.unregister(cc_ex)
-		}
-		this.fid2frontend[fid] = cc
-		this.fids = append(this.fids, fid)
-		this.notifyRegister(fid)
-		log.Println("[Info]register fid:", fid)
-	} else {
-		log.Println("[Error]Unmarshal register pack", err)
-	}
-}
-
-func (this *BackGate) unregister(cc *IConnection) {
-	for fid, c := range this.fid2frontend {
-		if c == cc {
-			//this.fid2frontend[fid] = nil
-			delete(this.fid2frontend, fid)
-			log.Println("[Info]unregister", fid)
-			for i, f := range this.fids {
-				if fid == f {
-					last := len(this.fids) - 1
-					this.fids[i] = this.fids[last]
-					this.fids = this.fids[:last]
+func (this *GateServer) comeout() {
+	for gop := range this.GateExit {
+		lids := gop.GetLids()
+		if len(lids) != 0 {
+			for _, lid := range lids {
+				if conn, ok := this.lid2conn[lid]; ok {
+					if gop.GetUri() == 0 {
+						this.unregister(conn, lid, true)
+					} else {
+						conn.Send(gop.GetBin())
+					}
 				}
 			}
+		} else {
+			if sid := gop.GetSid(); sid != 0 {
+				this.Broadcast(sid, gop.GetBin())
+			}
 		}
 	}
 }
 
-func (this *BackGate) notifyRegister(fid uint32) {
-	this.GateInChan <- &proto.Passpack{Uri: pb.Uint32(URI_REGISTER), Fid: pb.Uint32(fid),
-		Ssid: pb.Uint32(0), Bin: []byte{}, Tsid: pb.Uint32(0),
-		Action: proto.Action_D2H_Register.Enum()}
+// test
+func (this *GateServer) get_sid_when_uri1() uint32 {
+	return 0
+}
+
+func (this *GateServer) unpack(b []byte) (msg *proto.GateInPack, err error) {
+	return
+}
+
+func (this *GateServer) comein(b []byte) {
+	if msg, err := this.unpack(b); err == nil {
+		this.GateEntry <- msg
+	}
+}
+
+func (this *GateServer) register(conn *IConnection, lid int64, sid uint32) {
+	this.lid2conn[lid] = conn
+	this.lid2sid[lid] = sid
+	if conns, exist := this.sid2conns[sid]; exist {
+		this.sid2conns[sid] = append(conns, conn)
+	} else {
+		conns := make([]*IConnection, 0, 16)
+		conns = append(conns, conn)
+		this.sid2conns[sid] = conns
+	}
+}
+
+func (this *GateServer) unregister(conn *IConnection, lid int64, initiative bool) {
+	sid := this.lid2sid[lid]
+	delete(this.lid2sid, lid)
+	conns := this.sid2conns[sid]
+	for i, c := range conns {
+		if c == conn {
+			conns[i] = conns[len(conns)-1]
+			conns = conns[:len(conns)-1]
+		}
+	}
+	this.sid2conns[sid] = conns
+
+	if c, exist := this.lid2conn[lid]; exist {
+		delete(this.lid2conn, lid)
+		if initiative {
+			c.Close()
+		} else {
+			this.GateEntry <- &proto.GateInPack{Lid: pb.Int64(lid), Sid: pb.Uint32(sid)}
+		}
+	}
+}
+
+func (this *GateServer) Broadcast(sid uint32, bin []byte) {
+	if conns, ok := this.sid2conns[sid]; ok {
+		for _, conn := range conns {
+			conn.Send(bin)
+		}
+	}
+}
+
+type ConnBuff struct {
+	conn *IConnection
+	buff []byte
+	lid  int64
 }

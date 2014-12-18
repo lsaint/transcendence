@@ -12,13 +12,13 @@ import (
 )
 
 type GoModule struct {
-	sendChan chan *proto.Passpack
+	sendChan chan *proto.GateOutPack
 	pm       *network.Postman
 	isLeader bool
 	tw       *TaskWaitress
 }
 
-func NewGoModule(out chan *proto.Passpack, pm *network.Postman, tw *TaskWaitress) *GoModule {
+func NewGoModule(out chan *proto.GateOutPack, pm *network.Postman, tw *TaskWaitress) *GoModule {
 	mod := &GoModule{sendChan: out,
 		pm:       pm,
 		isLeader: false,
@@ -27,18 +27,18 @@ func NewGoModule(out chan *proto.Passpack, pm *network.Postman, tw *TaskWaitress
 }
 
 func (this *GoModule) Py_SendMsg(args *py.Tuple) (ret *py.Base, err error) {
-	var tsid, ssid, uri, action, fid int
+	var sid, uri int
 	var sbin string
-	var uids []int
-	err = py.ParseV(args, &tsid, &ssid, &uri, &sbin, &action, &fid, &uids)
+	var lids []int
+	err = py.ParseV(args, &sid, &uri, &sbin, &lids)
 	if err != nil {
 		fmt.Println("SendMsg err", err)
 		return
 	}
 
-	uids32 := make([]uint32, len(uids))
-	for idx, i := range uids {
-		uids32[idx] = uint32(i)
+	lids64 := make([]int64, len(lids))
+	for idx, i := range lids {
+		lids64[idx] = int64(i)
 	}
 
 	//b, err := base64.StdEncoding.DecodeString(sbin)
@@ -46,13 +46,11 @@ func (this *GoModule) Py_SendMsg(args *py.Tuple) (ret *py.Base, err error) {
 	//	fmt.Println("Base64 decode err", err)
 	//	return
 	//}
-	this.sendChan <- &proto.Passpack{Tsid: pb.Uint32(uint32(tsid)),
-		Ssid:   pb.Uint32(uint32(ssid)),
-		Uri:    pb.Uint32(uint32(uri)),
-		Action: proto.Action(action).Enum(),
-		Uids:   uids32,
-		Fid:    pb.Uint32(uint32(fid)),
-		Bin:    []byte(sbin)}
+	this.sendChan <- &proto.GateOutPack{
+		Lids: lids64,
+		Sid:  pb.Uint32(uint32(sid)),
+		Uri:  pb.Uint32(uint32(uri)),
+		Bin:  []byte(sbin)}
 	return py.IncNone(), nil
 }
 

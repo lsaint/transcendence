@@ -12,12 +12,26 @@ enum Action {
 }
 
 message Passpack {
-    required uint32 tsid = 1;
-    required uint32 ssid = 2;
+    required int64 lid = 1;
+    required uint32 sid = 2;
     required uint32 uri = 3;
     required bytes bin = 4;
     required Action action = 5;
     repeated uint32 uids = 6;
-    optional uint32 fid = 7;
+    repeated int64 lids = 7;
+}
+
+message GateInPack {
+    required int64 lid = 1;
+    required uint32 sid = 2;
+    required uint32 uri = 3;
+    required bytes bin = 4;
+}
+
+message GateOutPack {
+    repeated int64 lids = 1;
+    optional uint32 uri = 2;
+    optional uint32 sid = 3;
+    required bytes bin = 4;
 }
 

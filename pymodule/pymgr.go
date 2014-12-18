@@ -20,7 +20,7 @@ const (
 )
 
 type PyMgr struct {
-	recvChan chan *proto.Passpack
+	recvChan chan *proto.GateInPack
 	httpChan chan *network.HttpReq
 
 	pm *network.Postman
@@ -41,8 +41,8 @@ type PyMgr struct {
 	pyready chan bool
 }
 
-func NewPyMgr(in chan *proto.Passpack,
-	out chan *proto.Passpack,
+func NewPyMgr(in chan *proto.GateInPack,
+	out chan *proto.GateOutPack,
 	http_req_chan chan *network.HttpReq) *PyMgr {
 
 	waiting, pyready := make(chan bool), make(chan bool)
@@ -131,31 +131,16 @@ func (this *PyMgr) Start() {
 	}
 }
 
-func (this *PyMgr) onProto(pack *proto.Passpack) {
-	tsid := py.NewInt64(int64(pack.GetTsid()))
-	defer tsid.Decref()
-	ssid := py.NewInt64(int64(pack.GetSsid()))
-	defer ssid.Decref()
+func (this *PyMgr) onProto(pack *proto.GateInPack) {
+	sid := py.NewInt64(int64(pack.GetSid()))
+	defer sid.Decref()
 	uri := py.NewInt(int(pack.GetUri()))
 	defer uri.Decref()
-
-	l := len(pack.GetUids())
-	uids := py.NewTuple(l)
-	defer uids.Decref()
-	for i, v := range pack.GetUids() {
-		ii := py.NewInt(int(v))
-		defer ii.Decref()
-		uids.SetItem(i, ii.Obj())
-	}
-
-	action := py.NewInt(int(pack.GetAction()))
-	defer action.Decref()
 
 	b := base64.StdEncoding.EncodeToString(pack.Bin)
 	data := py.NewString(string(b))
 	defer data.Decref()
-	_, err := this.callPyFunc("OnGateProto", tsid.Obj(), ssid.Obj(),
-		uri.Obj(), data.Obj(), action.Obj(), uids.Obj())
+	_, err := this.callPyFunc("OnGateProto", sid.Obj(), uri.Obj(), data.Obj())
 	if err != nil {
 		log.Println("OnGateProto err:", err)
 	}
