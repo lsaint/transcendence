@@ -180,6 +180,7 @@ func (this *ServiceModule) leaveplatform(req string, reply chan string) {
 }
 
 func (this *ServiceModule) checkalive(r *network.HttpReq) {
+	log.Println("http-service checkalive")
 	r.Ret <- fmt.Sprintf("response=checkalive&ts=%v", time.Now().Unix())
 }
 
