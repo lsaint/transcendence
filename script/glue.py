@@ -73,6 +73,15 @@ def OnHttpReq(jn, url):
     return "return " + url
 
 
+def OnUplinkmsg(meta, data):
+    print "OnUplinkmsg", meta, data
+
+
+def OnLeaveplatform(meta, uid):
+    print "OnLeaveplatformA", meta, uid
+
+
+
 def OnClusterNodeEvent(ev_type, node_name):
     print "----->OnClusterNodeEvent<----", ev_type, node_name
     try:
