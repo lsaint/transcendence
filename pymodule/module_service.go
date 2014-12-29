@@ -39,6 +39,7 @@ func NewServiceModule(caller PyFuncCaller) *ServiceModule {
 }
 
 func (this *ServiceModule) init() {
+	this.httpSrv.Start()
 	this.register()
 }
 
