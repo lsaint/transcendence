@@ -9,7 +9,7 @@ import (
 	"transcendence/proto"
 
 	"github.com/hashicorp/raft"
-	"github.com/qiniu/py"
+	"github.com/lsaint/py"
 )
 
 const (

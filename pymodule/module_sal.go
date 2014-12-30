@@ -7,7 +7,7 @@ import (
 	"thrift/salService"
 
 	"git.apache.org/thrift.git/lib/go/thrift"
-	"github.com/qiniu/py"
+	"github.com/lsaint/py"
 
 	. "transcendence/conf"
 	"transcendence/network"

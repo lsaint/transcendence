@@ -4,7 +4,7 @@ import (
 	"flag"
 	"log"
 
-	"github.com/qiniu/py"
+	"github.com/lsaint/py"
 )
 
 var config *Config

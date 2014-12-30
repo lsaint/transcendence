@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"log"
 
-	"github.com/qiniu/py"
+	"github.com/lsaint/py"
 )
 
 var LV = map[string]int{

@@ -10,7 +10,7 @@ import (
 	"time"
 	"transcendence/network"
 
-	"github.com/qiniu/py"
+	"github.com/lsaint/py"
 
 	. "transcendence/conf"
 )
@@ -139,7 +139,7 @@ func (this *ServiceModule) uplinkmsg(req string, reply chan string) {
 	defer userip.Decref()
 	meta.SetItemString("userip", userip.Obj())
 
-	data := py.NewString(m["data"][0])
+	data := py.NewStringWithSize(m["data"][0], len(m["data"][0]))
 	defer data.Decref()
 
 	if _, err := this.caller.callPyFunc("OnUplinkmsg", meta.Obj(), data.Obj()); err != nil {

@@ -4,7 +4,7 @@ import (
 	"log"
 
 	"github.com/garyburd/redigo/redis"
-	"github.com/qiniu/py"
+	"github.com/lsaint/py"
 )
 
 type RedisModule struct {

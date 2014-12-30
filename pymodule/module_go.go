@@ -3,7 +3,7 @@ package pymodule
 import (
 	"fmt"
 
-	"github.com/qiniu/py"
+	"github.com/lsaint/py"
 
 	"transcendence/network"
 	"transcendence/proto"
