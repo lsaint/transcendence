@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 	"net/url"
+	"strconv"
 	"strings"
 	"time"
 	"transcendence/network"
@@ -84,56 +85,61 @@ type S_uplinkmsg struct {
 }
 
 func (this *ServiceModule) uplinkmsg(req string, reply chan string) {
-	m := &S_uplinkmsg{}
-	err := json.Unmarshal([]byte(req), m)
+	m, err := url.ParseQuery(req)
 	if err != nil {
-		log.Println("uplinkmsg Unmarshal err", err)
+		log.Println("uplinkmsg ParseQuery err", err)
 		return
 	}
 	meta := py.NewDict()
 	defer meta.Decref()
 
-	msgfrom := py.NewString(m.Msgfrom)
+	msgfrom := py.NewString(m["msgfrom"][0])
 	defer msgfrom.Decref()
 	meta.SetItemString("msgfrom", msgfrom.Obj())
 
-	action := py.NewString(m.Action)
+	action := py.NewString(m["action"][0])
 	defer action.Decref()
 	meta.SetItemString("action", action.Obj())
 
-	appid := py.NewInt64(m.Appid)
+	_appid, err := strconv.Atoi(m["appid"][0])
+	appid := py.NewInt64(int64(_appid))
 	defer appid.Decref()
 	meta.SetItemString("appid", appid.Obj())
 
-	suid := py.NewInt64(m.Suid)
+	_suid, err := strconv.Atoi(m["suid"][0])
+	suid := py.NewInt64(int64(_suid))
 	defer suid.Decref()
 	meta.SetItemString("suid", suid.Obj())
 
-	uid := py.NewInt64(m.Uid)
+	_uid, err := strconv.Atoi(m["uid"][0])
+	uid := py.NewInt64(int64(_uid))
 	defer uid.Decref()
 	meta.SetItemString("uid", uid.Obj())
 
-	topsid := py.NewInt64(m.Topsid)
+	_topsid, err := strconv.Atoi(m["topsid"][0])
+	topsid := py.NewInt64(int64(_topsid))
 	defer topsid.Decref()
 	meta.SetItemString("topsid", topsid.Obj())
 
-	subsid := py.NewInt64(m.Subsid)
+	_subsid, err := strconv.Atoi(m["subsid"][0])
+	subsid := py.NewInt64(int64(_subsid))
 	defer subsid.Decref()
 	meta.SetItemString("subsid", subsid.Obj())
 
-	yyfrom := py.NewString(m.Yyfrom)
+	yyfrom := py.NewString(m["yyfrom"][0])
 	defer yyfrom.Decref()
 	meta.SetItemString("yyfrom", yyfrom.Obj())
 
-	terminaltype := py.NewInt64(m.Terminaltype)
+	_terminaltype, err := strconv.Atoi(m["terminaltype"][0])
+	terminaltype := py.NewInt64(int64(_terminaltype))
 	defer terminaltype.Decref()
 	meta.SetItemString("terminaltype", terminaltype.Obj())
 
-	userip := py.NewString(m.Userip)
+	userip := py.NewString(m["userip"][0])
 	defer userip.Decref()
 	meta.SetItemString("userip", userip.Obj())
 
-	data := py.NewString(m.Data)
+	data := py.NewString(m["data"][0])
 	defer data.Decref()
 
 	if _, err := this.caller.callPyFunc("OnUplinkmsg", meta.Obj(), data.Obj()); err != nil {
@@ -150,28 +156,29 @@ type S_leaveplatform struct {
 }
 
 func (this *ServiceModule) leaveplatform(req string, reply chan string) {
-	m := &S_leaveplatform{}
-	err := json.Unmarshal([]byte(req), m)
+	m, err := url.ParseQuery(req)
 	if err != nil {
-		log.Println("leaveplatform Unmarshal err", err)
+		log.Println("leaveplatform ParseQuery err", err)
 		return
 	}
 	meta := py.NewDict()
 	defer meta.Decref()
 
-	msgfrom := py.NewString(m.Msgfrom)
+	msgfrom := py.NewString(m["msgfrom"][0])
 	defer msgfrom.Decref()
 	meta.SetItemString("msgfrom", msgfrom.Obj())
 
-	action := py.NewString(m.Action)
+	action := py.NewString(m["action"][0])
 	defer action.Decref()
 	meta.SetItemString("action", action.Obj())
 
-	suid := py.NewInt64(m.Suid)
+	_suid, err := strconv.Atoi(m["suid"][0])
+	suid := py.NewInt64(int64(_suid))
 	defer suid.Decref()
 	meta.SetItemString("suid", suid.Obj())
 
-	uid := py.NewInt64(m.Uid)
+	_uid, err := strconv.Atoi(m["uid"][0])
+	uid := py.NewInt64(int64(_uid))
 	defer uid.Decref()
 
 	if _, err := this.caller.callPyFunc("OnLeaveplatform", meta.Obj(), uid.Obj()); err != nil {
