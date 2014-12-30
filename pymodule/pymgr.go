@@ -96,10 +96,10 @@ func NewPyMgr(in chan *proto.GateInPack,
 		log.Fatalln("ExecCodeModule failed:", err)
 	}
 
-	//mgr.servicemod, err = py.NewGoModule("service", "", NewServiceModule(mgr))
-	//if err != nil {
-	//	log.Fatalln("NewServiceModule failed:", err)
-	//}
+	mgr.servicemod, err = py.NewGoModule("service", "", NewServiceModule(mgr))
+	if err != nil {
+		log.Fatalln("NewServiceModule failed:", err)
+	}
 
 	go func() {
 		fd := py.NewInt64(mgr.tw.GetFd())
