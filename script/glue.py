@@ -78,7 +78,7 @@ def OnUplinkmsg(meta, uri, data):
 
 
 def OnLeaveplatform(meta, uid):
-    print "OnLeaveplatformA", meta, uid
+    print "OnLeaveplatform", meta, uid
 
 
 

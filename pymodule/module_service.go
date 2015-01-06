@@ -96,7 +96,7 @@ func (this *ServiceModule) uplinkmsg(req string, reply chan string) {
 		return
 	}
 
-	this.OnUplinkmsg(m)
+	this.passMsg(m)
 	reply <- ""
 }
 
@@ -192,7 +192,7 @@ func (this *ServiceModule) leaveplatform(req string, reply chan string) {
 	defer uid.Decref()
 
 	if _, err := this.caller.callPyFunc("OnLeaveplatform", meta.Obj(), uid.Obj()); err != nil {
-		log.Println("OnUplinkmsg err:", err)
+		log.Println("OnLeaveplatform err:", err)
 	}
 	reply <- ""
 }
@@ -333,7 +333,7 @@ func NewClientMsgBroker() *ClientMsgBroker {
 		ClientProtoChan: make(chan *ClientProto, I("BUF_QUEUE"))}
 }
 
-func (this *ClientMsgBroker) OnUplinkmsg(m url.Values) {
+func (this *ClientMsgBroker) passMsg(m url.Values) {
 	uid, _ := strconv.Atoi(m["uid"][0])
 	subsid, _ := strconv.Atoi(m["subsid"][0])
 	cbuff, exist := this.uid2clientbuff[uint32(uid)]
@@ -400,12 +400,11 @@ type ClientBuff struct {
 	Subsid uint32
 	Uid    uint32
 	meta   url.Values
-	bytes.Buffer
+	*bytes.Buffer
 }
 
 func NewClientBuff(uid, ssid uint32, meta url.Values) *ClientBuff {
-	var b bytes.Buffer
-	return &ClientBuff{Uid: uid, Subsid: ssid, meta: meta, Buffer: b}
+	return &ClientBuff{Uid: uid, Subsid: ssid, meta: meta, Buffer: new(bytes.Buffer)}
 }
 
 func (this *ClientBuff) Close() error {
