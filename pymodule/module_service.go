@@ -344,14 +344,14 @@ func (this *ClientMsgBroker) passMsg(m url.Values) {
 	} else if cbuff.Subsid != uint32(subsid) {
 		cbuff.Reset()
 	}
-	cbuff.WriteString(m["data"][0])
+	cbuff.Write([]byte(m["data"][0]))
 	m.Del("data")
 }
 
 func (this *ClientMsgBroker) acceptConn(cbuff *ClientBuff) {
-	c := network.NewIConnection(cbuff)
+	c := network.NewIConnection(cbuff, false)
 	for {
-		if buff_body, ok := c.ReadBody(); ok {
+		if buff_body, err := c.ReadBody(); err == nil {
 			uri := binary.LittleEndian.Uint32(buff_body[:network.LEN_URI])
 			cbuff.Read(this.tmpbuf)
 			m := cbuff.meta
@@ -401,14 +401,34 @@ type ClientBuff struct {
 	Subsid uint32
 	Uid    uint32
 	meta   url.Values
+	c      chan []byte
 	*bytes.Buffer
 }
 
 func NewClientBuff(uid, ssid uint32, meta url.Values) *ClientBuff {
-	return &ClientBuff{Uid: uid, Subsid: ssid, meta: meta, Buffer: new(bytes.Buffer)}
+	return &ClientBuff{Uid: uid, Subsid: ssid, meta: meta,
+		c:      make(chan []byte, 128),
+		Buffer: new(bytes.Buffer)}
 }
 
 func (this *ClientBuff) Close() error {
 	this.Reset()
 	return nil
+}
+
+func (this *ClientBuff) Write(b []byte) (int, error) {
+	this.c <- b
+	return len(b), nil
+}
+
+func (this *ClientBuff) Read(p []byte) (n int, err error) {
+	for {
+		if this.Len() < len(p) {
+			this.Buffer.Write(<-this.c)
+		} else {
+			break
+		}
+	}
+	p = this.Next(len(p))
+	return len(p), nil
 }
