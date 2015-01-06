@@ -429,6 +429,6 @@ func (this *ClientBuff) Read(p []byte) (n int, err error) {
 			break
 		}
 	}
-	p = this.Next(len(p))
-	return len(p), nil
+	n, err = this.Buffer.Read(p)
+	return
 }
