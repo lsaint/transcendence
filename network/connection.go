@@ -17,13 +17,16 @@ const (
 type IConnection struct {
 	conn     io.ReadWriteCloser
 	sendchan chan []byte
+	issend   bool
 }
 
-func NewIConnection(c io.ReadWriteCloser) *IConnection {
+func NewIConnection(c io.ReadWriteCloser, issend bool) *IConnection {
 	cliConn := new(IConnection)
 	cliConn.conn = c
-	cliConn.sendchan = make(chan []byte, I("BUF_QUEUE"))
-	go cliConn.sending()
+	if issend {
+		cliConn.sendchan = make(chan []byte, I("BUF_QUEUE"))
+		go cliConn.sending()
+	}
 	return cliConn
 }
 
@@ -49,17 +52,17 @@ func (this *IConnection) sending() {
 	}
 }
 
-func (this *IConnection) Read(buff []byte) bool {
+func (this *IConnection) Read(buff []byte) error {
 	if _, err := io.ReadFull(this.conn, buff); err != nil {
 		log.Println("[Error]ReadFull err", err)
-		return false
+		return err
 	}
-	return true
+	return nil
 }
 
-func (this *IConnection) ReadBody() (ret []byte, ok bool) {
+func (this *IConnection) ReadBody() (ret []byte, err error) {
 	buff_head := make([]byte, LEN_HEAD)
-	if !this.Read(buff_head) {
+	if err = this.Read(buff_head); err != nil {
 		return
 	}
 	len_head := binary.LittleEndian.Uint32(buff_head) - LEN_EXTRA
@@ -68,10 +71,9 @@ func (this *IConnection) ReadBody() (ret []byte, ok bool) {
 		return
 	}
 	ret = make([]byte, len_head)
-	if !this.Read(ret) {
+	if err = this.Read(ret); err != nil {
 		return
 	}
-	ok = true
 	return
 }
 

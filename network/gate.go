@@ -53,9 +53,9 @@ func (this *GateServer) Start() {
 }
 
 func (this *GateServer) acceptConn(conn net.Conn, lid int64) {
-	cliConn := NewIConnection(conn)
+	cliConn := NewIConnection(conn, true)
 	for {
-		if buff_body, ok := cliConn.ReadBody(); ok {
+		if buff_body, err := cliConn.ReadBody(); err == nil {
 			this.buffChan <- &ConnBuff{cliConn, buff_body, lid}
 			continue
 		}
