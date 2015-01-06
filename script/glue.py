@@ -73,8 +73,8 @@ def OnHttpReq(jn, url):
     return "return " + url
 
 
-def OnUplinkmsg(meta, data):
-    print "OnUplinkmsg", meta, data
+def OnUplinkmsg(meta, uri, data):
+    print "OnUplinkmsg", meta, uri, data
 
 
 def OnLeaveplatform(meta, uid):

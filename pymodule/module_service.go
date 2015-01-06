@@ -1,6 +1,8 @@
 package pymodule
 
 import (
+	"bytes"
+	"encoding/binary"
 	"encoding/json"
 	"fmt"
 	"log"
@@ -24,6 +26,7 @@ type ServiceModule struct {
 	httpChan chan *network.HttpReq
 	httpSrv  *network.HttpServer
 	caller   PyFuncCaller
+	*ClientMsgBroker
 }
 
 func NewServiceModule(caller PyFuncCaller) *ServiceModule {
@@ -34,6 +37,7 @@ func NewServiceModule(caller PyFuncCaller) *ServiceModule {
 		caller:   caller,
 		httpSrv: network.NewHttpServer(httpChan, fmt.Sprintf(":%v", I("SERVICE_LISTEN_PORT")),
 			[]string{"/uplinkmsg", "/leaveplatform", "/checkalive"}),
+		ClientMsgBroker: NewClientMsgBroker(),
 	}
 	service.init()
 	return service
@@ -43,6 +47,7 @@ func (this *ServiceModule) init() {
 	go this.httpSrv.Start()
 	this.register()
 	go this.processServiceMsg()
+	go this.proto2py()
 }
 
 /*
@@ -90,62 +95,67 @@ func (this *ServiceModule) uplinkmsg(req string, reply chan string) {
 		log.Println("uplinkmsg ParseQuery err", err)
 		return
 	}
-	meta := py.NewDict()
-	defer meta.Decref()
 
-	msgfrom := py.NewString(m["msgfrom"][0])
-	defer msgfrom.Decref()
-	meta.SetItemString("msgfrom", msgfrom.Obj())
-
-	action := py.NewString(m["action"][0])
-	defer action.Decref()
-	meta.SetItemString("action", action.Obj())
-
-	_appid, err := strconv.Atoi(m["appid"][0])
-	appid := py.NewInt64(int64(_appid))
-	defer appid.Decref()
-	meta.SetItemString("appid", appid.Obj())
-
-	_suid, err := strconv.Atoi(m["suid"][0])
-	suid := py.NewInt64(int64(_suid))
-	defer suid.Decref()
-	meta.SetItemString("suid", suid.Obj())
-
-	_uid, err := strconv.Atoi(m["uid"][0])
-	uid := py.NewInt64(int64(_uid))
-	defer uid.Decref()
-	meta.SetItemString("uid", uid.Obj())
-
-	_topsid, err := strconv.Atoi(m["topsid"][0])
-	topsid := py.NewInt64(int64(_topsid))
-	defer topsid.Decref()
-	meta.SetItemString("topsid", topsid.Obj())
-
-	_subsid, err := strconv.Atoi(m["subsid"][0])
-	subsid := py.NewInt64(int64(_subsid))
-	defer subsid.Decref()
-	meta.SetItemString("subsid", subsid.Obj())
-
-	yyfrom := py.NewString(m["yyfrom"][0])
-	defer yyfrom.Decref()
-	meta.SetItemString("yyfrom", yyfrom.Obj())
-
-	_terminaltype, err := strconv.Atoi(m["terminaltype"][0])
-	terminaltype := py.NewInt64(int64(_terminaltype))
-	defer terminaltype.Decref()
-	meta.SetItemString("terminaltype", terminaltype.Obj())
-
-	userip := py.NewString(m["userip"][0])
-	defer userip.Decref()
-	meta.SetItemString("userip", userip.Obj())
-
-	data := py.NewStringWithSize(m["data"][0], len(m["data"][0]))
-	defer data.Decref()
-
-	if _, err := this.caller.callPyFunc("OnUplinkmsg", meta.Obj(), data.Obj()); err != nil {
-		log.Println("OnUplinkmsg err:", err)
-	}
+	this.OnUplinkmsg(m)
 	reply <- ""
+}
+
+func (this *ServiceModule) proto2py() {
+	for p := range this.ClientProtoChan {
+		meta := py.NewDict()
+		defer meta.Decref()
+
+		msgfrom := py.NewString(p.Msgfrom)
+		defer msgfrom.Decref()
+		meta.SetItemString("msgfrom", msgfrom.Obj())
+
+		action := py.NewString(p.Action)
+		defer action.Decref()
+		meta.SetItemString("action", action.Obj())
+
+		appid := py.NewInt64(p.Appid)
+		defer appid.Decref()
+		meta.SetItemString("appid", appid.Obj())
+
+		suid := py.NewInt64(p.Suid)
+		defer suid.Decref()
+		meta.SetItemString("suid", suid.Obj())
+
+		uid := py.NewInt64(p.Uid)
+		defer uid.Decref()
+		meta.SetItemString("uid", uid.Obj())
+
+		topsid := py.NewInt64(p.Topsid)
+		defer topsid.Decref()
+		meta.SetItemString("topsid", topsid.Obj())
+
+		subsid := py.NewInt64(p.Subsid)
+		defer subsid.Decref()
+		meta.SetItemString("subsid", subsid.Obj())
+
+		yyfrom := py.NewString(p.Yyfrom)
+		defer yyfrom.Decref()
+		meta.SetItemString("yyfrom", yyfrom.Obj())
+
+		terminaltype := py.NewInt64(p.Terminaltype)
+		defer terminaltype.Decref()
+		meta.SetItemString("terminaltype", terminaltype.Obj())
+
+		userip := py.NewString(p.Userip)
+		defer userip.Decref()
+		meta.SetItemString("userip", userip.Obj())
+
+		data := py.NewStringWithSize(p.Data, len(p.Data))
+		defer data.Decref()
+
+		uri := py.NewInt64(p.Uri)
+		defer uri.Decref()
+
+		if _, err := this.caller.callPyFunc("OnUplinkmsg",
+			uri.Obj(), meta.Obj(), data.Obj()); err != nil {
+			log.Println("OnUplinkmsg err:", err)
+		}
+	}
 }
 
 type S_leaveplatform struct {
@@ -307,4 +317,98 @@ func (this *ServiceModule) Py_Broadcast(args *py.Tuple) (ret *py.Base, err error
 	go this.doCast(u, body)
 
 	return py.IncNone(), nil
+}
+
+//
+
+type ClientMsgBroker struct {
+	uid2clientbuff  map[uint32]*ClientBuff
+	tmpbuf          []byte
+	ClientProtoChan chan *ClientProto
+}
+
+func NewClientMsgBroker() *ClientMsgBroker {
+	return &ClientMsgBroker{uid2clientbuff: make(map[uint32]*ClientBuff),
+		tmpbuf:          make([]byte, 2),
+		ClientProtoChan: make(chan *ClientProto, I("BUF_QUEUE"))}
+}
+
+func (this *ClientMsgBroker) OnUplinkmsg(m url.Values) {
+	uid, _ := strconv.Atoi(m["uid"][0])
+	subsid, _ := strconv.Atoi(m["subsid"][0])
+	cbuff, exist := this.uid2clientbuff[uint32(uid)]
+	if !exist {
+		cbuff := NewClientBuff(uint32(uid), uint32(subsid), m)
+		go this.acceptConn(cbuff)
+	} else if cbuff.Subsid != uint32(subsid) {
+		cbuff.Reset()
+	}
+	cbuff.WriteString(m["data"][0])
+	m.Del("data")
+}
+
+func (this *ClientMsgBroker) acceptConn(cbuff *ClientBuff) {
+	c := network.NewIConnection(cbuff)
+	for {
+		if buff_body, ok := c.ReadBody(); ok {
+			uri := binary.LittleEndian.Uint32(buff_body[:network.LEN_URI])
+			cbuff.Read(this.tmpbuf)
+			m := cbuff.meta
+
+			appid, _ := strconv.Atoi(m["appid"][0])
+			suid, _ := strconv.Atoi(m["suid"][0])
+			uid, _ := strconv.Atoi(m["uid"][0])
+			subsid, _ := strconv.Atoi(m["subsid"][0])
+			topsid, _ := strconv.Atoi(m["topsid"][0])
+			terminaltype, _ := strconv.Atoi(m["terminaltype"][0])
+
+			this.ClientProtoChan <- &ClientProto{
+				Msgfrom:      m["msgfrom"][0],
+				Action:       m["action"][0],
+				Appid:        int64(appid),
+				Suid:         int64(suid),
+				Uid:          int64(uid),
+				Topsid:       int64(topsid),
+				Subsid:       int64(subsid),
+				Yyfrom:       m["yyfrom"][0],
+				Terminaltype: int64(terminaltype),
+				Userip:       m["userip"][0],
+				Data:         string(buff_body[10:]), // len + magic + uri = 10
+				Uri:          int64(uri)}
+		}
+	}
+	c.Close()
+}
+
+type ClientProto struct {
+	Msgfrom      string `json:"msgfrom"`
+	Action       string `json:"action"`
+	Appid        int64  `json:"appid"`
+	Suid         int64  `json:"suid"`
+	Uid          int64  `json:"uid"`
+	Topsid       int64  `json:"topsid"`
+	Subsid       int64  `json:"subsid"`
+	Yyfrom       string `json:"yyfrom"`
+	Terminaltype int64  `json:"terminaltype"`
+	Userip       string `json:"userip"`
+	Data         string `json:"data"`
+
+	Uri int64 `json:"uri"`
+}
+
+type ClientBuff struct {
+	Subsid uint32
+	Uid    uint32
+	meta   url.Values
+	bytes.Buffer
+}
+
+func NewClientBuff(uid, ssid uint32, meta url.Values) *ClientBuff {
+	var b bytes.Buffer
+	return &ClientBuff{Uid: uid, Subsid: ssid, meta: meta, Buffer: b}
+}
+
+func (this *ClientBuff) Close() error {
+	this.Reset()
+	return nil
 }
