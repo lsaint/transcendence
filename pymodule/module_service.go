@@ -338,7 +338,8 @@ func (this *ClientMsgBroker) passMsg(m url.Values) {
 	subsid, _ := strconv.Atoi(m["subsid"][0])
 	cbuff, exist := this.uid2clientbuff[uint32(uid)]
 	if !exist {
-		cbuff := NewClientBuff(uint32(uid), uint32(subsid), m)
+		cbuff = NewClientBuff(uint32(uid), uint32(subsid), m)
+		this.uid2clientbuff[uint32(uid)] = cbuff
 		go this.acceptConn(cbuff)
 	} else if cbuff.Subsid != uint32(subsid) {
 		cbuff.Reset()
