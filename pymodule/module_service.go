@@ -98,12 +98,6 @@ func (this *ServiceModule) uplinkmsg(req string, reply chan string) {
 		return
 	}
 
-	// test
-	uri, ret, _ := yyprotogo.Unpack([]byte(m["data"][0]))
-	p := &proto.Y_C2LLogin{}
-	p.Unmarshal(ret)
-	fmt.Println(uri, "Login", p)
-
 	this.passMsg(m)
 	reply <- ""
 }
@@ -158,6 +152,37 @@ func (this *ServiceModule) proto2py() {
 
 		uri := py.NewInt64(p.Uri)
 		defer uri.Decref()
+
+		// test
+		_uri, ret, _ := yyprotogo.Unpack([]byte(p.Data))
+		if _uri == 4608210 {
+			// test marshal
+			lp := &proto.Y_C2LLogin{}
+			lp.Unmarshal(ret)
+			fmt.Println(_uri, "Login", lp)
+			// test unmarshal
+
+			rep := &proto.Y_L2CLoginRep{1, 2, 3, 0, 1, 1420614669, 1, 10, 1, 0, 1}
+			if b, e := rep.Marshal(); e == nil {
+
+				_topsid := lp.Topsid
+				subfix := url.Values{}
+				subfix.Set("appid", fmt.Sprintf("%v", I("SERVICE_APPID")))
+				subfix.Add("reqkey", S("SERVICE_REGKEY"))
+				subfix.Add("uid", fmt.Sprintf("%v", p.Uid))
+				subfix.Add("topsid", fmt.Sprintf("%v", _topsid))
+
+				u := fmt.Sprintf("%v/%v", S("URL_SERVICE_UNICAST"), subfix.Encode())
+
+				ret, _ = yyprotogo.Pack(4608211, b)
+				go this.doCast(u, string(ret))
+				fmt.Println("send login reply..")
+
+			} else {
+				fmt.Println("login rep marshal err")
+			}
+		}
+		// end test
 
 		if _, err := this.caller.callPyFunc("OnUplinkmsg",
 			uri.Obj(), meta.Obj(), data.Obj()); err != nil {
