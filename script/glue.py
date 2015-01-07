@@ -118,13 +118,41 @@ def main(fd):
         log.error("%s-%s" % ("main", traceback.format_exc()))
 
 
-import testing
-def loop(fd):
-    testing.testEventNotify(fd)
-
-
 def pymain():
     print "pymain start"
     print "pymain end"
+
+
+import select, os, struct, sys
+def EpollLoop(fd):
+    epoll = select.epoll()
+    epoll.register(fd, select.EPOLLIN)
+    go.PyReady()
+    while True:
+        events = epoll.poll(1)
+        for fileno, event in events:
+            ret = os.read(fd, 8)
+            go.DoTask()
+
+
+def KqueueLoop():
+    import signal
+    kq = select.kqueue()
+    kevent = select.kevent(signal.SIGUSR1, filter=select.KQ_FILTER_SIGNAL,
+                            flags=select.KQ_EV_ADD | select.KQ_EV_ENABLE)
+    go.PyReady()
+    while True:
+        revents = kq.control([kevent], 1, None)  # block
+        for event in revents:
+            if (event.filter == select.KQ_FILTER_SIGNAL):
+                go.DoTask()
+
+
+def loop(fd):
+    import platform
+    if platform.system() == "Linux":
+        EpollLoop(fd)
+    else:
+        KqueueLoop()
 
 

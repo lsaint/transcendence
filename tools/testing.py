@@ -64,36 +64,3 @@ def testRaftApply():
     raft.apply("hello raft %d" % (random.randint(1, 1000)))
 
 
-import select, os, struct, sys
-def testEpoll(fd):
-    epoll = select.epoll()
-    epoll.register(fd, select.EPOLLIN)
-    go.PyReady()
-    while True:
-        events = epoll.poll(1)
-        for fileno, event in events:
-            ret = os.read(fd, 8)
-            #print "read fd", struct.unpack("Q", ret)[0]
-            go.DoTask()
-
-
-def testKqueue():
-    import signal
-    kq = select.kqueue()
-    kevent = select.kevent(signal.SIGUSR1, filter=select.KQ_FILTER_SIGNAL,
-                            flags=select.KQ_EV_ADD | select.KQ_EV_ENABLE)
-    go.PyReady()
-    while True:
-        revents = kq.control([kevent], 1, None)  # block
-        for event in revents:
-            if (event.filter == select.KQ_FILTER_SIGNAL):
-                go.DoTask()
-
-
-def testEventNotify(fd):
-    import platform
-    if platform.system() == "Linux":
-        testEpoll(fd)
-    else:
-        testKqueue()
-

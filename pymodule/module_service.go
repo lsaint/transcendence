@@ -351,7 +351,6 @@ func (this *ClientMsgBroker) acceptConn(cbuff *ClientBuff) {
 	for {
 		if buff_body, err := c.ReadBody(); err == nil {
 			uri := binary.LittleEndian.Uint32(buff_body[:network.LEN_URI])
-			cbuff.Next(2)
 			m := cbuff.meta
 
 			appid, _ := strconv.Atoi(m["appid"][0])
