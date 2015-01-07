@@ -323,13 +323,11 @@ func (this *ServiceModule) Py_Broadcast(args *py.Tuple) (ret *py.Base, err error
 
 type ClientMsgBroker struct {
 	uid2clientbuff  map[uint32]*ClientBuff
-	tmpbuf          []byte
 	ClientProtoChan chan *ClientProto
 }
 
 func NewClientMsgBroker() *ClientMsgBroker {
 	return &ClientMsgBroker{uid2clientbuff: make(map[uint32]*ClientBuff),
-		tmpbuf:          make([]byte, 2),
 		ClientProtoChan: make(chan *ClientProto, I("BUF_QUEUE"))}
 }
 
@@ -353,7 +351,7 @@ func (this *ClientMsgBroker) acceptConn(cbuff *ClientBuff) {
 	for {
 		if buff_body, err := c.ReadBody(); err == nil {
 			uri := binary.LittleEndian.Uint32(buff_body[:network.LEN_URI])
-			cbuff.Read(this.tmpbuf)
+			cbuff.Next(2)
 			m := cbuff.meta
 
 			appid, _ := strconv.Atoi(m["appid"][0])
@@ -374,7 +372,7 @@ func (this *ClientMsgBroker) acceptConn(cbuff *ClientBuff) {
 				Yyfrom:       m["yyfrom"][0],
 				Terminaltype: int64(terminaltype),
 				Userip:       m["userip"][0],
-				Data:         string(buff_body[10:]), // len + magic + uri = 10
+				Data:         string(buff_body[6:]), // magic + uri = 10
 				Uri:          int64(uri)}
 		}
 	}
