@@ -11,8 +11,10 @@ import (
 	"strings"
 	"time"
 	"transcendence/network"
+	"transcendence/proto"
 
 	"github.com/lsaint/py"
+	"github.com/lsaint/yyprotogo"
 
 	. "transcendence/conf"
 )
@@ -95,6 +97,12 @@ func (this *ServiceModule) uplinkmsg(req string, reply chan string) {
 		log.Println("uplinkmsg ParseQuery err", err)
 		return
 	}
+
+	// test
+	uri, ret, _ := yyprotogo.Unpack([]byte(m["data"][0]))
+	p := &proto.Y_C2LLogin{}
+	p.Unmarshal(ret)
+	fmt.Println(uri, "Login", p)
 
 	this.passMsg(m)
 	reply <- ""
