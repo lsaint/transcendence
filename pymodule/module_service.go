@@ -167,11 +167,11 @@ func (this *ServiceModule) proto2py() {
 				_topsid := lp.Topsid
 				subfix := url.Values{}
 				subfix.Set("appid", fmt.Sprintf("%v", I("SERVICE_APPID")))
-				subfix.Add("reqkey", S("SERVICE_REGKEY"))
+				subfix.Add("regkey", S("SERVICE_REGKEY"))
 				subfix.Add("uid", fmt.Sprintf("%v", p.Uid))
 				subfix.Add("topsid", fmt.Sprintf("%v", _topsid))
 
-				u := fmt.Sprintf("%v/%v", S("URL_SERVICE_UNICAST"), subfix.Encode())
+				u := fmt.Sprintf("%v?%v", S("URL_SERVICE_UNICAST"), subfix.Encode())
 
 				ret, _ := yyprotogo.Pack(4608211, b)
 				go this.doCast(u, string(ret))
@@ -268,7 +268,7 @@ func (this *ServiceModule) Py_Unicast(args *py.Tuple) (ret *py.Base, err error) 
 
 	subfix := url.Values{}
 	subfix.Set("appid", fmt.Sprintf("%v", I("SERVICE_APPID")))
-	subfix.Add("reqkey", S("SERVICE_REGKEY"))
+	subfix.Add("regkey", S("SERVICE_REGKEY"))
 	subfix.Add("uid", fmt.Sprintf("%v", uid))
 	subfix.Add("topsid", fmt.Sprintf("%v", topsid))
 
@@ -306,7 +306,7 @@ func (this *ServiceModule) Py_Multicast(args *py.Tuple) (ret *py.Base, err error
 
 	subfix := url.Values{}
 	subfix.Set("appid", fmt.Sprintf("%v", I("SERVICE_APPID")))
-	subfix.Add("reqkey", S("SERVICE_REGKEY"))
+	subfix.Add("regkey", S("SERVICE_REGKEY"))
 	subfix.Add("topsid", fmt.Sprintf("%v", topsid))
 	subfix.Add("uids", strings.Join(s_uids, ","))
 
@@ -341,7 +341,7 @@ func (this *ServiceModule) Py_Broadcast(args *py.Tuple) (ret *py.Base, err error
 
 	subfix := url.Values{}
 	subfix.Set("appid", fmt.Sprintf("%v", I("SERVICE_APPID")))
-	subfix.Add("reqkey", S("SERVICE_REGKEY"))
+	subfix.Add("regkey", S("SERVICE_REGKEY"))
 	subfix.Add("topsid", fmt.Sprintf("%v", topsid))
 	subfix.Add("subsid", fmt.Sprintf("%v", subsid))
 
