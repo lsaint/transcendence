@@ -154,12 +154,11 @@ func (this *ServiceModule) proto2py() {
 		defer uri.Decref()
 
 		// test
-		_uri, ret, _ := yyprotogo.Unpack([]byte(p.Data))
-		if _uri == 4608210 {
+		if p.Uri == 4608210 {
 			// test marshal
 			lp := &proto.Y_C2LLogin{}
-			lp.Unmarshal(ret)
-			fmt.Println(_uri, "Login", lp)
+			lp.Unmarshal([]byte(p.Data))
+			fmt.Println("Login", lp)
 			// test unmarshal
 
 			rep := &proto.Y_L2CLoginRep{1, 2, 3, 0, 1, 1420614669, 1, 10, 1, 0, 1}
@@ -174,7 +173,7 @@ func (this *ServiceModule) proto2py() {
 
 				u := fmt.Sprintf("%v/%v", S("URL_SERVICE_UNICAST"), subfix.Encode())
 
-				ret, _ = yyprotogo.Pack(4608211, b)
+				ret, _ := yyprotogo.Pack(4608211, b)
 				go this.doCast(u, string(ret))
 				fmt.Println("send login reply..")
 
