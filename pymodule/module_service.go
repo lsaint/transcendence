@@ -270,7 +270,7 @@ func (this *ServiceModule) Py_Unicast(args *py.Tuple) (ret *py.Base, err error) 
 	subfix.Add("uid", fmt.Sprintf("%v", uid))
 	subfix.Add("topsid", fmt.Sprintf("%v", topsid))
 
-	u := fmt.Sprintf("%v/%v", S("URL_SERVICE_UNICAST"), subfix.Encode())
+	u := fmt.Sprintf("%v?%v", S("URL_SERVICE_UNICAST"), subfix.Encode())
 	go this.doCast(u, body)
 
 	return py.IncNone(), nil
@@ -308,7 +308,7 @@ func (this *ServiceModule) Py_Multicast(args *py.Tuple) (ret *py.Base, err error
 	subfix.Add("topsid", fmt.Sprintf("%v", topsid))
 	subfix.Add("uids", strings.Join(s_uids, ","))
 
-	u := fmt.Sprintf("%v/%v", S("URL_SERVICE_MULTICAST"), subfix.Encode())
+	u := fmt.Sprintf("%v?%v", S("URL_SERVICE_MULTICAST"), subfix.Encode())
 	go this.doCast(u, body)
 
 	return py.IncNone(), nil
@@ -343,7 +343,7 @@ func (this *ServiceModule) Py_Broadcast(args *py.Tuple) (ret *py.Base, err error
 	subfix.Add("topsid", fmt.Sprintf("%v", topsid))
 	subfix.Add("subsid", fmt.Sprintf("%v", subsid))
 
-	u := fmt.Sprintf("%v/%v", S("URL_SERVICE_BROADCAST"), subfix.Encode())
+	u := fmt.Sprintf("%v?%v", S("URL_SERVICE_BROADCAST"), subfix.Encode())
 	go this.doCast(u, body)
 
 	return py.IncNone(), nil
