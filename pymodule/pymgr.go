@@ -86,6 +86,11 @@ func NewPyMgr(in chan *proto.GateInPack,
 	}
 	defer code.Decref()
 
+	mgr.servicemod, err = py.NewGoModule("service", "", NewServiceModule(mgr))
+	if err != nil {
+		log.Fatalln("NewServiceModule failed:", err)
+	}
+
 	mgr.glue, err = py.ExecCodeModule("glue", code.Obj())
 	if err != nil {
 		log.Fatalln("ExecCodeModule glue err:", err)
@@ -94,11 +99,6 @@ func NewPyMgr(in chan *proto.GateInPack,
 	_, err = mgr.glue.CallMethodObjArgs("test_script")
 	if err != nil {
 		log.Fatalln("ExecCodeModule failed:", err)
-	}
-
-	mgr.servicemod, err = py.NewGoModule("service", "", NewServiceModule(mgr))
-	if err != nil {
-		log.Fatalln("NewServiceModule failed:", err)
 	}
 
 	go func() {
