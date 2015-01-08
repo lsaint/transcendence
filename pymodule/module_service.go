@@ -11,10 +11,8 @@ import (
 	"strings"
 	"time"
 	"transcendence/network"
-	"transcendence/proto"
 
 	"github.com/lsaint/py"
-	"github.com/lsaint/yyprotogo"
 
 	. "transcendence/conf"
 )
@@ -154,37 +152,37 @@ func (this *ServiceModule) proto2py() {
 		defer uri.Decref()
 
 		// test
-		if p.Uri == 4608210 {
-			// test marshal
-			lp := &proto.Y_C2LLogin{}
-			lp.Unmarshal([]byte(p.Data))
-			fmt.Println("Login", lp)
-			// test unmarshal
+		//if p.Uri == 4608210 {
+		//	// test marshal
+		//	lp := &proto.Y_C2LLogin{}
+		//	lp.Unmarshal([]byte(p.Data))
+		//	fmt.Println("Login", lp)
+		//	// test unmarshal
 
-			rep := &proto.Y_L2CLoginRep{1, 2, 3, 0, 1, 1420614669, 1, 10, 1, 0, 1}
-			if b, e := rep.Marshal(); e == nil {
+		//	rep := &proto.Y_L2CLoginRep{1, 2, 3, 0, 1, 1420614669, 1, 10, 1, 0, 1}
+		//	if b, e := rep.Marshal(); e == nil {
 
-				_topsid := lp.Topsid
-				subfix := url.Values{}
-				subfix.Set("appid", fmt.Sprintf("%v", I("SERVICE_APPID")))
-				subfix.Add("regkey", S("SERVICE_REGKEY"))
-				subfix.Add("uid", fmt.Sprintf("%v", p.Uid))
-				subfix.Add("topsid", fmt.Sprintf("%v", _topsid))
+		//		_topsid := lp.Topsid
+		//		subfix := url.Values{}
+		//		subfix.Set("appid", fmt.Sprintf("%v", I("SERVICE_APPID")))
+		//		subfix.Add("regkey", S("SERVICE_REGKEY"))
+		//		subfix.Add("uid", fmt.Sprintf("%v", p.Uid))
+		//		subfix.Add("topsid", fmt.Sprintf("%v", _topsid))
 
-				u := fmt.Sprintf("%v?%v", S("URL_SERVICE_UNICAST"), subfix.Encode())
+		//		u := fmt.Sprintf("%v?%v", S("URL_SERVICE_UNICAST"), subfix.Encode())
 
-				ret, _ := yyprotogo.Pack(4608211, b)
-				go this.doCast(u, string(ret))
-				fmt.Println("send login reply..")
+		//		ret, _ := yyprotogo.Pack(4608211, b)
+		//		go this.doCast(u, string(ret))
+		//		fmt.Println("send login reply..")
 
-			} else {
-				fmt.Println("login rep marshal err")
-			}
-		}
+		//	} else {
+		//		fmt.Println("login rep marshal err")
+		//	}
+		//}
 		// end test
 
 		if _, err := this.caller.callPyFunc("OnUplinkmsg",
-			uri.Obj(), meta.Obj(), data.Obj()); err != nil {
+			meta.Obj(), uri.Obj(), data.Obj()); err != nil {
 			log.Println("OnUplinkmsg err:", err)
 		}
 	}
