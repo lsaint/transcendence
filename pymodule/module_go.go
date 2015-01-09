@@ -62,6 +62,13 @@ func (this *GoModule) Py_PostAsync(args *py.Tuple) (ret *py.Base, err error) {
 	return py.IncNone(), nil
 }
 
+func (this *GoModule) Py_Post(args *py.Tuple) (ret *py.Base, err error) {
+	var url, content string
+	err = py.Parse(args, &url, &content)
+	s := this.pm.Post(url, content)
+	return py.NewString(s).Obj(), nil
+}
+
 func (this *GoModule) Py_IsLeader(args *py.Tuple) (ret *py.Base, err error) {
 	if this.isLeader {
 		return py.NewInt(1).Obj(), nil
